@@ -26,10 +26,15 @@ const CheckoutPage = () => {
   useEffect(() => {
     const loadCart = async () => {
       setIsInitialLoading(true)
-      if (user) {
-        await refreshCart()
+      try {
+        if (user && refreshCart) {
+          await refreshCart()
+        }
+      } catch (error) {
+        console.error("Error refreshing cart:", error)
+      } finally {
+        setIsInitialLoading(false)
       }
-      setIsInitialLoading(false)
     }
 
     loadCart()

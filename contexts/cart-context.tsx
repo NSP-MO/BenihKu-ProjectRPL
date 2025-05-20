@@ -19,6 +19,7 @@ type CartContextType = {
   removeItem: (id: number) => void
   updateQuantity: (id: number, quantity: number) => void
   clearCart: () => void
+  refreshCart: () => Promise<void> // Added refreshCart function
   totalItems: number
   totalPrice: number
   isLoading: boolean
@@ -101,6 +102,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setItems([])
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // Add refreshCart function to explicitly reload cart data
+  const refreshCart = async () => {
+    if (operationInProgress.current) return
+    operationInProgress.current = true
+
+    try {
+      await loadCart()
+    } finally {
+      setTimeout(() => {
+        operationInProgress.current = false
+      }, 500)
     }
   }
 
@@ -438,6 +453,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         removeItem,
         updateQuantity,
         clearCart,
+        refreshCart, // Added refreshCart to the context
         totalItems,
         totalPrice,
         isLoading,

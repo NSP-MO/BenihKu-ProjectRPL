@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { useParams } from "next/navigation"
+import { useParams, usePathname } from "next/navigation"
 import { ArrowLeft, Loader2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -11,14 +11,23 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import Header from "@/components/header"
 import { supabase } from "@/lib/supabase"
 import type { Product } from "@/lib/products"
+import { storeNavigationPath } from "@/lib/navigation-utils"
 
 export default function CategoryPage() {
   const params = useParams()
+  const pathname = usePathname()
   const categoryName = decodeURIComponent(params.category as string)
 
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Store current path for back navigation
+  useEffect(() => {
+    if (pathname) {
+      storeNavigationPath(pathname)
+    }
+  }, [pathname])
 
   useEffect(() => {
     const fetchProductsByCategory = async () => {

@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { ArrowLeft, Heart, MessageCircle, ShoppingCart, Loader2 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { QRCodeSVG } from "qrcode.react"
 
 import { Button } from "@/components/ui/button"
@@ -29,9 +29,11 @@ import Header from "@/components/header"
 import { useAuth } from "@/contexts/auth-context"
 import { useCart } from "@/contexts/cart-context"
 import { getProductById, type Product } from "@/lib/products"
+import { storeNavigationPath } from "@/lib/navigation-utils"
 
 export default function ProductPage({ params }: { params: { id: string } }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { user } = useAuth()
   const { addItem } = useCart()
   const productId = Number.parseInt(params.id)
@@ -44,6 +46,13 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   })
   const [product, setProduct] = useState<Product | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+
+  // Store current path for back navigation
+  useEffect(() => {
+    if (pathname) {
+      storeNavigationPath(pathname)
+    }
+  }, [pathname])
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -127,6 +136,9 @@ export default function ProductPage({ params }: { params: { id: string } }) {
       return
     }
 
+    // Store current path before navigating
+    storeNavigationPath(pathname)
+
     // Add to cart and redirect to checkout
     addItem({
       id: product.id,
@@ -173,7 +185,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
     <div className="flex min-h-screen flex-col">
       <Header />
       <div className="container py-12">
-        <Button variant="ghost" className="mb-6" onClick={() => router.push("/")}>
+        <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Kembali
         </Button>

@@ -2,11 +2,14 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, ArrowLeft } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { Button } from "@/components/ui/button"
+import { handleBackNavigation } from "@/lib/navigation-utils"
 
 export default function CartPage() {
+  const router = useRouter()
   const { items, removeItem, updateQuantity, clearCart, totalPrice, isLoading } = useCart()
   const [isClearing, setIsClearing] = useState(false)
 
@@ -16,6 +19,10 @@ export default function CartPage() {
       await clearCart()
       setIsClearing(false)
     }
+  }
+
+  const handleBack = () => {
+    handleBackNavigation(router)
   }
 
   if (isLoading) {
@@ -38,16 +45,28 @@ export default function CartPage() {
         </div>
         <h2 className="text-2xl font-semibold mb-2">Keranjang Anda Kosong</h2>
         <p className="text-gray-500 dark:text-gray-400 mb-6">Anda belum menambahkan produk apapun ke keranjang.</p>
-        <Link href="/">
-          <Button className="bg-green-600 hover:bg-green-700">Mulai Belanja</Button>
-        </Link>
+        <div className="flex justify-center gap-4">
+          <Button variant="outline" onClick={handleBack} className="flex items-center">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Kembali
+          </Button>
+          <Link href="/">
+            <Button className="bg-green-600 hover:bg-green-700">Mulai Belanja</Button>
+          </Link>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-8">Keranjang Belanja</h1>
+      <div className="flex items-center mb-6">
+        <Button variant="ghost" onClick={handleBack} className="mr-4">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Kembali
+        </Button>
+        <h1 className="text-2xl font-bold">Keranjang Belanja</h1>
+      </div>
 
       <div className="grid md:grid-cols-3 gap-8">
         <div className="md:col-span-2">
