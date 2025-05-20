@@ -4,12 +4,8 @@ import { Leaf } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import PlantGrid from "@/components/plant-grid"
 import Header from "@/components/header"
-import { getHomepageSettings } from "@/lib/homepage-settings"
 
-export default async function Home() {
-  // Get homepage settings
-  const homepageSettings = await getHomepageSettings()
-
+export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
@@ -20,6 +16,7 @@ export default async function Home() {
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                   Temukan Tanaman Impian Anda
+                  {/*Database Dalam Perbaikan*/}
                 </h1>
                 <p className="mx-auto max-w-[700px] text-gray-500 dark:text-gray-400 md:text-xl">
                   Koleksi tanaman hias dan tanaman indoor berkualitas tinggi untuk mempercantik ruangan Anda.
@@ -44,16 +41,13 @@ export default async function Home() {
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">{homepageSettings.title}</h2>
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Tanaman Populer</h2>
                 <p className="mx-auto max-w-[700px] text-gray-500 dark:text-gray-400 md:text-xl">
-                  {homepageSettings.description}
+                  Tanaman yang paling banyak dicari oleh pelanggan kami.
                 </p>
               </div>
             </div>
-            <PlantGrid
-              showPopular={homepageSettings.product_ids.length === 0}
-              featuredProductIds={homepageSettings.product_ids.length > 0 ? homepageSettings.product_ids : undefined}
-            />
+            <PlantGrid showPopular={true} />
           </div>
         </section>
         <section className="w-full py-12 md:py-24 lg:py-32 bg-green-50 dark:bg-green-950">
