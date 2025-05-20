@@ -2,7 +2,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Leaf, Plus, Settings, Package, LogOut, BarChart3 } from "lucide-react"
+import { Leaf, Plus, Settings, Package, LogOut, BarChart3, Home } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -91,6 +91,13 @@ export default function AdminDashboard() {
               >
                 <BarChart3 className="h-4 w-4" />
                 Analitik
+              </Link>
+              <Link
+                href="/admin/homepage-settings"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all"
+              >
+                <Home className="h-4 w-4" />
+                Pengaturan Homepage
               </Link>
               <Link
                 href="/admin/setup"

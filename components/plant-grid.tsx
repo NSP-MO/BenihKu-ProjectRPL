@@ -6,20 +6,33 @@ import Image from "next/image"
 import { Loader2 } from "lucide-react"
 
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { getProducts, getPopularProducts, type Product } from "@/lib/products"
+import { getProducts, getPopularProducts, getFeaturedProducts, type Product } from "@/lib/products"
 
 interface PlantGridProps {
   showPopular?: boolean
+  featuredProductIds?: number[]
 }
 
-export default function PlantGrid({ showPopular = false }: PlantGridProps) {
+export default function PlantGrid({ showPopular = false, featuredProductIds }: PlantGridProps) {
   const [plants, setPlants] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function loadPlants() {
       try {
-        const data = showPopular ? await getPopularProducts() : await getProducts()
+        let data: Product[] = []
+
+        if (featuredProductIds && featuredProductIds.length > 0) {
+          // If we have specific product IDs to show
+          data = await getFeaturedProducts(featuredProductIds)
+        } else if (showPopular) {
+          // Fall back to popular products if no specific IDs
+          data = await getPopularProducts()
+        } else {
+          // Otherwise get all products
+          data = await getProducts()
+        }
+
         setPlants(data)
       } catch (error) {
         console.error("Error loading plants:", error)
@@ -29,7 +42,7 @@ export default function PlantGrid({ showPopular = false }: PlantGridProps) {
     }
 
     loadPlants()
-  }, [showPopular])
+  }, [showPopular, featuredProductIds])
 
   if (loading) {
     return (

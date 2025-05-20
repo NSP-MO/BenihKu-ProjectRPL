@@ -2,7 +2,7 @@
 
 import { createServerSupabaseClient } from "@/lib/supabase"
 
-export type Product = {
+export interface Product {
   id: number
   name: string
   price: number
@@ -10,10 +10,6 @@ export type Product = {
   category: string
   description: string
   is_popular: boolean
-  is_published?: boolean
-  stock?: number
-  image_path?: string
-  image_bucket?: string
   care_instructions?: {
     light: string
     water: string
@@ -27,25 +23,18 @@ export type Product = {
     rating: number
     response_time: string
   }
+  stock?: number
+  image_path?: string
+  image_bucket?: string
 }
 
-export async function getProducts() {
+export async function getProducts(): Promise<Product[]> {
   const supabase = createServerSupabaseClient()
 
   try {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("is_published", true) // Only get published products
-      .order("id")
+    const { data, error } = await supabase.from("products").select("*").order("id")
 
     if (error) {
-      // Check if the error is because the table doesn't exist
-      if (error.message.includes("relation") && error.message.includes("does not exist")) {
-        console.error("Products table does not exist. Please run the setup process.")
-        return []
-      }
-
       console.error("Error fetching products:", error)
       return []
     }
@@ -57,50 +46,13 @@ export async function getProducts() {
   }
 }
 
-export async function getProductById(id: number) {
+export async function getPopularProducts(): Promise<Product[]> {
   const supabase = createServerSupabaseClient()
 
   try {
-    // Use .eq() instead of .single() to avoid errors when no rows are found
-    const { data, error } = await supabase.from("products").select("*").eq("id", id).eq("is_published", true) // Only get published products
+    const { data, error } = await supabase.from("products").select("*").eq("is_popular", true).order("id")
 
     if (error) {
-      console.error(`Error fetching product with id ${id}:`, error)
-      return null
-    }
-
-    // Check if any data was returned
-    if (!data || data.length === 0) {
-      console.log(`No product found with id ${id}`)
-      return null
-    }
-
-    // Return the first matching product
-    return data[0] as Product
-  } catch (error) {
-    console.error(`Error fetching product with id ${id}:`, error)
-    return null
-  }
-}
-
-export async function getPopularProducts(limit = 6) {
-  const supabase = createServerSupabaseClient()
-
-  try {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("is_popular", true)
-      .eq("is_published", true) // Only get published products
-      .limit(limit)
-
-    if (error) {
-      // Check if the error is because the table doesn't exist
-      if (error.message.includes("relation") && error.message.includes("does not exist")) {
-        console.error("Products table does not exist. Please run the setup process.")
-        return []
-      }
-
       console.error("Error fetching popular products:", error)
       return []
     }
@@ -112,23 +64,54 @@ export async function getPopularProducts(limit = 6) {
   }
 }
 
-export async function getProductsByCategory(category: string) {
+export async function getFeaturedProducts(productIds: number[]): Promise<Product[]> {
   const supabase = createServerSupabaseClient()
 
   try {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("category", category)
-      .eq("is_published", true) // Only get published products
+    const { data, error } = await supabase.from("products").select("*").in("id", productIds).order("id")
 
     if (error) {
-      // Check if the error is because the table doesn't exist
-      if (error.message.includes("relation") && error.message.includes("does not exist")) {
-        console.error("Products table does not exist. Please run the setup process.")
-        return []
-      }
+      console.error("Error fetching featured products:", error)
+      return []
+    }
 
+    // Sort the products in the same order as the productIds array
+    const sortedProducts = productIds
+      .map((id) => data.find((product) => product.id === id))
+      .filter(Boolean) as Product[]
+
+    return sortedProducts
+  } catch (error) {
+    console.error("Error fetching featured products:", error)
+    return []
+  }
+}
+
+export async function getProductById(id: number): Promise<Product | null> {
+  const supabase = createServerSupabaseClient()
+
+  try {
+    const { data, error } = await supabase.from("products").select("*").eq("id", id).single()
+
+    if (error) {
+      console.error(`Error fetching product with id ${id}:`, error)
+      return null
+    }
+
+    return data as Product
+  } catch (error) {
+    console.error(`Error fetching product with id ${id}:`, error)
+    return null
+  }
+}
+
+export async function getProductsByCategory(category: string): Promise<Product[]> {
+  const supabase = createServerSupabaseClient()
+
+  try {
+    const { data, error } = await supabase.from("products").select("*").eq("category", category).order("id")
+
+    if (error) {
       console.error(`Error fetching products in category ${category}:`, error)
       return []
     }
