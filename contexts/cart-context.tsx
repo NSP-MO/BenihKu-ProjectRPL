@@ -33,12 +33,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const { user } = useAuth()
   const operationInProgress = useRef(false)
+  const cartOperationTimeout = useRef<NodeJS.Timeout | null>(null)
 
   // Calculate total items and price
   const totalItems = items.reduce((total, item) => total + item.quantity, 0)
   const totalPrice = items.reduce((total, item) => total + item.price * item.quantity, 0)
 
-  // Fetch cart from database
+  // Fetch cart from database with caching
   const fetchCartFromDatabase = async () => {
     if (!user) return []
 
@@ -106,6 +107,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Load cart when user changes
   useEffect(() => {
     loadCart()
+
+    // Clean up any pending operations when user changes
+    return () => {
+      if (cartOperationTimeout.current) {
+        clearTimeout(cartOperationTimeout.current)
+      }
+    }
   }, [user])
 
   // Save cart to localStorage for non-logged-in users
@@ -114,6 +122,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
     }
   }, [items, isLoading, user])
+
+  // Debounce function to prevent rapid successive calls
+  const debounce = (fn: Function, delay: number) => {
+    if (cartOperationTimeout.current) {
+      clearTimeout(cartOperationTimeout.current)
+    }
+
+    return new Promise<void>((resolve) => {
+      cartOperationTimeout.current = setTimeout(() => {
+        resolve(fn())
+      }, delay)
+    })
+  }
 
   // Add item to cart
   const addItem = async (item: Omit<CartItem, "quantity">) => {
@@ -125,15 +146,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
         // For logged-in users, add to database first
         setIsLoading(true)
 
-        // Check if item already exists in cart
+        // Check if item already exists in cart - FIXED: don't use .single()
         const { data: existingItems, error: fetchError } = await supabase
           .from("cart_items")
           .select("*")
           .eq("user_id", user.id)
           .eq("product_id", item.id)
-          .single()
 
-        if (fetchError && !fetchError.message.includes("No rows found")) {
+        if (fetchError) {
           console.error("Error checking existing cart item:", fetchError)
           toast({
             title: "Error",
@@ -142,52 +162,60 @@ export function CartProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        if (existingItems) {
+        // Check if we found any existing items
+        if (existingItems && existingItems.length > 0) {
           // If item exists, increase quantity
-          const newQuantity = existingItems.quantity + 1
-          const { error: updateError } = await supabase
-            .from("cart_items")
-            .update({ quantity: newQuantity })
-            .eq("user_id", user.id)
-            .eq("product_id", item.id)
+          const existingItem = existingItems[0]
+          const newQuantity = existingItem.quantity + 1
 
-          if (updateError) {
-            console.error("Error updating cart item:", updateError)
+          // Use debounce to prevent rapid successive updates
+          await debounce(async () => {
+            const { error: updateError } = await supabase
+              .from("cart_items")
+              .update({ quantity: newQuantity })
+              .eq("user_id", user.id)
+              .eq("product_id", item.id)
+
+            if (updateError) {
+              console.error("Error updating cart item:", updateError)
+              toast({
+                title: "Error",
+                description: "Failed to update item quantity. Please try again.",
+              })
+              return
+            }
+
             toast({
-              title: "Error",
-              description: "Failed to update item quantity. Please try again.",
+              title: "Jumlah ditambahkan",
+              description: `${item.name} sekarang berjumlah ${newQuantity} di keranjang Anda.`,
             })
-            return
-          }
-
-          toast({
-            title: "Jumlah ditambahkan",
-            description: `${item.name} sekarang berjumlah ${newQuantity} di keranjang Anda.`,
-          })
+          }, 300)
         } else {
           // If item doesn't exist, add it with quantity 1
-          const { error: insertError } = await supabase.from("cart_items").insert({
-            user_id: user.id,
-            product_id: item.id,
-            product_name: item.name,
-            price: item.price,
-            image_url: item.image || "",
-            quantity: 1,
-          })
-
-          if (insertError) {
-            console.error("Error adding cart item:", insertError)
-            toast({
-              title: "Error",
-              description: "Failed to add item to cart. Please try again.",
+          await debounce(async () => {
+            const { error: insertError } = await supabase.from("cart_items").insert({
+              user_id: user.id,
+              product_id: item.id,
+              product_name: item.name,
+              price: item.price,
+              image_url: item.image || "",
+              quantity: 1,
             })
-            return
-          }
 
-          toast({
-            title: "Ditambahkan ke keranjang",
-            description: `${item.name} telah ditambahkan ke keranjang Anda.`,
-          })
+            if (insertError) {
+              console.error("Error adding cart item:", insertError)
+              toast({
+                title: "Error",
+                description: "Failed to add item to cart. Please try again.",
+              })
+              return
+            }
+
+            toast({
+              title: "Ditambahkan ke keranjang",
+              description: `${item.name} telah ditambahkan ke keranjang Anda.`,
+            })
+          }, 300)
         }
 
         // Refresh cart from database
@@ -229,7 +257,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       })
     } finally {
       setIsLoading(false)
-      operationInProgress.current = false
+      // Add a small delay before allowing next operation to prevent rapid clicks
+      setTimeout(() => {
+        operationInProgress.current = false
+      }, 500)
     }
   }
 
@@ -246,23 +277,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
         // Get item name for toast message
         const itemToRemove = items.find((item) => item.id === id)
 
-        const { error } = await supabase.from("cart_items").delete().eq("user_id", user.id).eq("product_id", id)
+        await debounce(async () => {
+          const { error } = await supabase.from("cart_items").delete().eq("user_id", user.id).eq("product_id", id)
 
-        if (error) {
-          console.error("Error removing cart item:", error)
-          toast({
-            title: "Error",
-            description: "Failed to remove item from cart. Please try again.",
-          })
-          return
-        }
+          if (error) {
+            console.error("Error removing cart item:", error)
+            toast({
+              title: "Error",
+              description: "Failed to remove item from cart. Please try again.",
+            })
+            return
+          }
 
-        if (itemToRemove) {
-          toast({
-            title: "Dihapus dari keranjang",
-            description: `${itemToRemove.name} telah dihapus dari keranjang Anda.`,
-          })
-        }
+          if (itemToRemove) {
+            toast({
+              title: "Dihapus dari keranjang",
+              description: `${itemToRemove.name} telah dihapus dari keranjang Anda.`,
+            })
+          }
+        }, 300)
 
         // Refresh cart from database
         const updatedCart = await fetchCartFromDatabase()
@@ -290,7 +323,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       })
     } finally {
       setIsLoading(false)
-      operationInProgress.current = false
+      setTimeout(() => {
+        operationInProgress.current = false
+      }, 500)
     }
   }
 
@@ -309,20 +344,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
         // For logged-in users, update in database first
         setIsLoading(true)
 
-        const { error } = await supabase
-          .from("cart_items")
-          .update({ quantity })
-          .eq("user_id", user.id)
-          .eq("product_id", id)
+        await debounce(async () => {
+          const { error } = await supabase
+            .from("cart_items")
+            .update({ quantity })
+            .eq("user_id", user.id)
+            .eq("product_id", id)
 
-        if (error) {
-          console.error("Error updating cart item quantity:", error)
-          toast({
-            title: "Error",
-            description: "Failed to update item quantity. Please try again.",
-          })
-          return
-        }
+          if (error) {
+            console.error("Error updating cart item quantity:", error)
+            toast({
+              title: "Error",
+              description: "Failed to update item quantity. Please try again.",
+            })
+            return
+          }
+        }, 300)
 
         // Refresh cart from database
         const updatedCart = await fetchCartFromDatabase()
@@ -339,7 +376,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       })
     } finally {
       setIsLoading(false)
-      operationInProgress.current = false
+      setTimeout(() => {
+        operationInProgress.current = false
+      }, 500)
     }
   }
 
@@ -353,16 +392,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
         // For logged-in users, clear from database first
         setIsLoading(true)
 
-        const { error } = await supabase.from("cart_items").delete().eq("user_id", user.id)
+        await debounce(async () => {
+          const { error } = await supabase.from("cart_items").delete().eq("user_id", user.id)
 
-        if (error) {
-          console.error("Error clearing cart:", error)
-          toast({
-            title: "Error",
-            description: "Failed to clear cart. Please try again.",
-          })
-          return
-        }
+          if (error) {
+            console.error("Error clearing cart:", error)
+            toast({
+              title: "Error",
+              description: "Failed to clear cart. Please try again.",
+            })
+            return
+          }
+        }, 300)
 
         // Refresh cart from database
         setItems([])
@@ -383,7 +424,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
       })
     } finally {
       setIsLoading(false)
-      operationInProgress.current = false
+      setTimeout(() => {
+        operationInProgress.current = false
+      }, 500)
     }
   }
 
