@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Leaf, Package, LogOut, BarChart3, Settings, ShoppingBag, Search } from "lucide-react"
+import { Leaf, Package, LogOut, BarChart3, Settings, ShoppingBag } from "lucide-react"
 import { format } from "date-fns"
 
 import { Button } from "@/components/ui/button"
@@ -12,41 +12,18 @@ import ProtectedRoute from "@/components/protected-route"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import { getOrderTotal, type Order, type OrderStatus } from "@/lib/orders"
-import { formatCurrency } from "@/lib/utils"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-
-// Helper function to format currency safely
-async function formatOrderTotal(order: Order) {
-  const total = await getOrderTotal(order)
-  return formatCurrency(total)
-}
+import type { Order, OrderStatus } from "@/lib/orders"
 
 export default function AdminOrdersPage() {
   const { user, logout } = useAuth()
   const router = useRouter()
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [activeTab, setActiveTab] = useState("all")
-  const [columnNames, setColumnNames] = useState<string[]>([])
 
   useEffect(() => {
     const fetchOrders = async () => {
       setIsLoading(true)
       try {
-        // First, check the schema to see what columns are available
-        const schemaResponse = await fetch("/api/check-orders-schema")
-        const schemaData = await schemaResponse.json()
-
-        if (schemaData.success && schemaData.columnNames) {
-          setColumnNames(schemaData.columnNames)
-          console.log("Orders table columns:", schemaData.columnNames)
-          console.log("Sample order data:", schemaData.sampleData)
-        }
-
-        // Now fetch the orders
         const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false })
 
         if (error) {
@@ -54,11 +31,7 @@ export default function AdminOrdersPage() {
           return
         }
 
-        if (data && data.length > 0) {
-          console.log("First order data:", data[0])
-        }
-
-        setOrders(data || [])
+        setOrders(data)
       } catch (error) {
         console.error("Error fetching orders:", error)
       } finally {
@@ -88,55 +61,6 @@ export default function AdminOrdersPage() {
         return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
-    }
-  }
-
-  const filteredOrders = orders.filter((order) => {
-    const searchLower = searchQuery.toLowerCase()
-    return (
-      order.id.toLowerCase().includes(searchLower) ||
-      order.user_id.toLowerCase().includes(searchLower) ||
-      order.status.toLowerCase().includes(searchLower)
-    )
-  })
-
-  const pendingOrders = filteredOrders.filter((order) => order.status === "pending")
-  const processingOrders = filteredOrders.filter((order) => order.status === "processing")
-  const shippedOrders = filteredOrders.filter((order) => order.status === "shipped")
-  const deliveredOrders = filteredOrders.filter((order) => order.status === "delivered")
-  const cancelledOrders = filteredOrders.filter((order) => order.status === "cancelled")
-
-  const getOrdersForTab = () => {
-    switch (activeTab) {
-      case "pending":
-        return pendingOrders
-      case "processing":
-        return processingOrders
-      case "shipped":
-        return shippedOrders
-      case "delivered":
-        return deliveredOrders
-      case "cancelled":
-        return cancelledOrders
-      default:
-        return filteredOrders
-    }
-  }
-
-  const getStatusColor = (status: OrderStatus): string => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800"
-      case "processing":
-        return "bg-blue-100 text-blue-800"
-      case "shipped":
-        return "bg-purple-100 text-purple-800"
-      case "delivered":
-        return "bg-green-100 text-green-800"
-      case "cancelled":
-        return "bg-red-100 text-red-800"
-      default:
-        return "bg-gray-100 text-gray-800"
     }
   }
 
@@ -228,136 +152,67 @@ export default function AdminOrdersPage() {
               <h1 className="text-2xl font-bold">Manajemen Pesanan</h1>
             </div>
 
-            {columnNames.length > 0 && (
-              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-md mb-4">
-                <p className="text-sm text-green-800 dark:text-green-300">
-                  Available columns in orders table: {columnNames.join(", ")}
-                </p>
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">Tidak ada pesanan yang ditemukan.</p>
+              </div>
+            ) : (
+              <div className="rounded-md border dark:border-gray-800">
+                <div className="relative w-full overflow-auto">
+                  <table className="w-full caption-bottom text-sm">
+                    <thead className="[&_tr]:border-b dark:border-gray-800">
+                      <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted dark:border-gray-800">
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Tanggal</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                          Pelanggan
+                        </th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Total</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="[&_tr:last-child]:border-0">
+                      {orders.map((order) => (
+                        <tr
+                          key={order.id}
+                          className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted dark:border-gray-800"
+                        >
+                          <td className="p-4 align-middle font-mono text-xs">{order.id.substring(0, 8)}...</td>
+                          <td className="p-4 align-middle">
+                            {format(new Date(order.created_at), "dd MMM yyyy HH:mm")}
+                          </td>
+                          <td className="p-4 align-middle">{order.user_id.substring(0, 8)}...</td>
+                          <td className="p-4 align-middle font-medium">Rp {order.total.toLocaleString("id-ID")}</td>
+                          <td className="p-4 align-middle">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeColor(
+                                order.status as OrderStatus,
+                              )}`}
+                            >
+                              {order.status}
+                            </span>
+                          </td>
+                          <td className="p-4 align-middle">
+                            <div className="flex gap-2">
+                              <Link href={`/admin/orders/${order.id}`}>
+                                <Button variant="outline" size="sm">
+                                  Detail
+                                </Button>
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
-
-            <div className="mb-6">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-                <Input
-                  placeholder="Cari pesanan..."
-                  className="pl-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <Tabs defaultValue="all" className="w-full" value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-3 md:grid-cols-6">
-                <TabsTrigger value="all">
-                  Semua
-                  <span className="ml-2 text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded-full">
-                    {filteredOrders.length}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="pending">
-                  Pending
-                  <span className="ml-2 text-xs bg-yellow-100 dark:bg-yellow-900 px-1.5 py-0.5 rounded-full">
-                    {pendingOrders.length}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="processing">
-                  Processing
-                  <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-900 px-1.5 py-0.5 rounded-full">
-                    {processingOrders.length}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="shipped">
-                  Shipped
-                  <span className="ml-2 text-xs bg-purple-100 dark:bg-purple-900 px-1.5 py-0.5 rounded-full">
-                    {shippedOrders.length}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="delivered">
-                  Delivered
-                  <span className="ml-2 text-xs bg-green-100 dark:bg-green-900 px-1.5 py-0.5 rounded-full">
-                    {deliveredOrders.length}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="cancelled">
-                  Cancelled
-                  <span className="ml-2 text-xs bg-red-100 dark:bg-red-900 px-1.5 py-0.5 rounded-full">
-                    {cancelledOrders.length}
-                  </span>
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value={activeTab} className="mt-4">
-                {isLoading ? (
-                  <div className="flex justify-center items-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-                  </div>
-                ) : getOrdersForTab().length === 0 ? (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">Tidak ada pesanan yang ditemukan.</p>
-                  </div>
-                ) : (
-                  <div className="rounded-md border dark:border-gray-800">
-                    <div className="relative w-full overflow-auto">
-                      <table className="w-full caption-bottom text-sm">
-                        <thead className="[&_tr]:border-b dark:border-gray-800">
-                          <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted dark:border-gray-800">
-                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
-                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                              Tanggal
-                            </th>
-                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                              Pelanggan
-                            </th>
-                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                              Total
-                            </th>
-                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                              Status
-                            </th>
-                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Aksi</th>
-                          </tr>
-                        </thead>
-                        <tbody className="[&_tr:last-child]:border-0">
-                          {getOrdersForTab().map((order) => (
-                            <tr
-                              key={order.id}
-                              className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted dark:border-gray-800"
-                            >
-                              <td className="p-4 align-middle font-mono text-xs">{order.id.substring(0, 8)}...</td>
-                              <td className="p-4 align-middle">
-                                {format(new Date(order.created_at), "dd MMM yyyy HH:mm")}
-                              </td>
-                              <td className="p-4 align-middle">{order.user_id.substring(0, 8)}...</td>
-                              <td className="p-4 align-middle font-medium">{formatCurrency(getOrderTotal(order))}</td>
-                              <td className="p-4 align-middle">
-                                <span
-                                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeColor(
-                                    order.status as OrderStatus,
-                                  )}`}
-                                >
-                                  {order.status}
-                                </span>
-                              </td>
-                              <td className="p-4 align-middle">
-                                <div className="flex gap-2">
-                                  <Link href={`/admin/orders/${order.id}`}>
-                                    <Button variant="outline" size="sm">
-                                      Detail
-                                    </Button>
-                                  </Link>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
           </main>
         </div>
       </div>

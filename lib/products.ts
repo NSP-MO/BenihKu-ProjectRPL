@@ -10,7 +10,7 @@ export type Product = {
   category: string
   description: string
   is_popular: boolean
-  is_published: boolean
+  is_published?: boolean
   stock?: number
   image_path?: string
   image_bucket?: string
@@ -29,18 +29,15 @@ export type Product = {
   }
 }
 
-export async function getProducts(includeUnpublished = false) {
+export async function getProducts() {
   const supabase = createServerSupabaseClient()
 
   try {
-    let query = supabase.from("products").select("*")
-
-    // Only filter by published status if we're not including unpublished products
-    if (!includeUnpublished) {
-      query = query.eq("is_published", true)
-    }
-
-    const { data, error } = await query.order("is_popular", { ascending: false }).order("id")
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("is_published", true) // Only get published products
+      .order("id")
 
     if (error) {
       // Check if the error is because the table doesn't exist
@@ -60,18 +57,12 @@ export async function getProducts(includeUnpublished = false) {
   }
 }
 
-export async function getProductById(id: number, includeUnpublished = false) {
+export async function getProductById(id: number) {
   const supabase = createServerSupabaseClient()
 
   try {
-    let query = supabase.from("products").select("*").eq("id", id)
-
-    // Only filter by published status if we're not including unpublished products
-    if (!includeUnpublished) {
-      query = query.eq("is_published", true)
-    }
-
-    const { data, error } = await query
+    // Use .eq() instead of .single() to avoid errors when no rows are found
+    const { data, error } = await supabase.from("products").select("*").eq("id", id).eq("is_published", true) // Only get published products
 
     if (error) {
       console.error(`Error fetching product with id ${id}:`, error)
@@ -100,7 +91,7 @@ export async function getPopularProducts(limit = 6) {
       .from("products")
       .select("*")
       .eq("is_popular", true)
-      .eq("is_published", true)
+      .eq("is_published", true) // Only get published products
       .limit(limit)
 
     if (error) {
@@ -129,9 +120,7 @@ export async function getProductsByCategory(category: string) {
       .from("products")
       .select("*")
       .eq("category", category)
-      .eq("is_published", true)
-      .order("is_popular", { ascending: false })
-      .order("id")
+      .eq("is_published", true) // Only get published products
 
     if (error) {
       // Check if the error is because the table doesn't exist
@@ -148,41 +137,5 @@ export async function getProductsByCategory(category: string) {
   } catch (error) {
     console.error(`Error fetching products in category ${category}:`, error)
     return []
-  }
-}
-
-export async function updateProductPublishedStatus(id: number, isPublished: boolean) {
-  const supabase = createServerSupabaseClient()
-
-  try {
-    const { data, error } = await supabase.from("products").update({ is_published: isPublished }).eq("id", id).select()
-
-    if (error) {
-      console.error(`Error updating published status for product ${id}:`, error)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true, data }
-  } catch (error: any) {
-    console.error(`Error updating published status for product ${id}:`, error)
-    return { success: false, error: error.message }
-  }
-}
-
-export async function updateProductPopularStatus(id: number, isPopular: boolean) {
-  const supabase = createServerSupabaseClient()
-
-  try {
-    const { data, error } = await supabase.from("products").update({ is_popular: isPopular }).eq("id", id).select()
-
-    if (error) {
-      console.error(`Error updating popular status for product ${id}:`, error)
-      return { success: false, error: error.message }
-    }
-
-    return { success: true, data }
-  } catch (error: any) {
-    console.error(`Error updating popular status for product ${id}:`, error)
-    return { success: false, error: error.message }
   }
 }

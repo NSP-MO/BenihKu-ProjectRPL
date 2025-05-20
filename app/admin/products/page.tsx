@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Loader2, Plus, Search, ArrowLeft, EyeOff } from "lucide-react"
+import { Loader2, Plus, Search, ArrowLeft } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,21 +11,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ProtectedRoute from "@/components/protected-route"
 import { getProducts, type Product } from "@/lib/products"
-import { Badge } from "@/components/ui/badge"
 
 export default function ProductsPage() {
   const router = useRouter()
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const [activeTab, setActiveTab] = useState("all")
 
   useEffect(() => {
     const loadProducts = async () => {
       setIsLoading(true)
       try {
-        // Include unpublished products in admin view
-        const productsData = await getProducts(true)
+        const productsData = await getProducts()
         setProducts(productsData)
       } catch (error) {
         console.error("Error loading products:", error)
@@ -44,7 +41,6 @@ export default function ProductsPage() {
   )
 
   const popularProducts = filteredProducts.filter((product) => product.is_popular)
-  const unpublishedProducts = filteredProducts.filter((product) => !product.is_published)
 
   return (
     <ProtectedRoute adminOnly>
@@ -77,18 +73,10 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="all" className="w-full" value={activeTab} onValueChange={setActiveTab}>
+        <Tabs defaultValue="all" className="w-full">
           <TabsList>
             <TabsTrigger value="all">Semua Produk</TabsTrigger>
             <TabsTrigger value="popular">Produk Populer</TabsTrigger>
-            <TabsTrigger value="unpublished" className="relative">
-              Tidak Dipublikasikan
-              {unpublishedProducts.length > 0 && (
-                <Badge variant="destructive" className="ml-2">
-                  {unpublishedProducts.length}
-                </Badge>
-              )}
-            </TabsTrigger>
           </TabsList>
           <TabsContent value="all" className="mt-4">
             {isLoading ? (
@@ -106,15 +94,6 @@ export default function ProductsPage() {
               </div>
             ) : (
               <ProductsGrid products={popularProducts} />
-            )}
-          </TabsContent>
-          <TabsContent value="unpublished" className="mt-4">
-            {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-              </div>
-            ) : (
-              <ProductsGrid products={unpublishedProducts} />
             )}
           </TabsContent>
         </Tabs>
@@ -138,15 +117,7 @@ function ProductsGrid({ products }: { products: Product[] }) {
         <Link key={product.id} href={`/admin/products/edit/${product.id}`}>
           <Card className="h-full cursor-pointer hover:shadow-md transition-shadow dark:border-gray-800">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center justify-between">
-                <span className="truncate">{product.name}</span>
-                {!product.is_published && (
-                  <Badge variant="outline" className="ml-2 bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
-                    <EyeOff className="h-3 w-3 mr-1" />
-                    Hidden
-                  </Badge>
-                )}
-              </CardTitle>
+              <CardTitle className="text-lg">{product.name}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex justify-between items-center">
