@@ -80,7 +80,7 @@ export default function OrderDetailsPage() {
           return
         }
 
-        // Get order items with product details
+        // Get order items
         const { data: itemsData, error: itemsError } = await supabase
           .from("order_items")
           .select(`
@@ -89,10 +89,7 @@ export default function OrderDetailsPage() {
             order_id,
             quantity,
             price,
-            products (
-              name,
-              image_url
-            )
+            product_name
           `)
           .eq("order_id", orderId)
 
@@ -100,21 +97,47 @@ export default function OrderDetailsPage() {
           throw itemsError
         }
 
-        // Transform items data
-        const items = itemsData.map((item) => ({
-          id: item.id,
-          product_id: item.product_id,
-          order_id: item.order_id,
-          quantity: item.quantity,
-          price: item.price,
-          product_name: item.products.name,
-          product_image: item.products.image_url,
-        }))
+        // Fetch product details for each item
+        const itemsWithProductDetails = await Promise.all(
+          itemsData.map(async (item) => {
+            try {
+              // Get product details
+              const { data: productData } = await supabase
+                .from("products")
+                .select("image, image_path, image_url")
+                .eq("id", item.product_id)
+                .single()
+
+              // Determine the product image
+              let productImage = "/placeholder.svg"
+              if (productData) {
+                if (productData.image_url) {
+                  productImage = productData.image_url
+                } else if (productData.image_path) {
+                  productImage = productData.image_path
+                } else if (productData.image) {
+                  productImage = productData.image
+                }
+              }
+
+              return {
+                ...item,
+                product_image: productImage,
+              }
+            } catch (err) {
+              console.error(`Error fetching product details for product ${item.product_id}:`, err)
+              return {
+                ...item,
+                product_image: "/placeholder.svg",
+              }
+            }
+          }),
+        )
 
         // Set the complete order with items
         setOrder({
           ...orderData,
-          items,
+          items: itemsWithProductDetails,
         })
       } catch (err) {
         console.error("Error fetching order details:", err)

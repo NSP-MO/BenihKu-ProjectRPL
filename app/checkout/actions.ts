@@ -97,13 +97,14 @@ export async function createOrder(formData: FormData) {
       }
     }
 
-    // Insert order items with product_name included
+    // Insert order items with product_name and subtotal included
     const orderItems = cartItems.map((item) => ({
       order_id: order.id,
       product_id: item.id,
-      product_name: item.name, // Include product_name to satisfy the NOT NULL constraint
+      product_name: item.name,
       quantity: item.quantity,
       price: item.price,
+      subtotal: item.price * item.quantity, // Calculate subtotal for each item
     }))
 
     const { error: itemsError } = await supabase.from("order_items").insert(orderItems)
