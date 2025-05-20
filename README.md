@@ -1,26 +1,86 @@
-# E-commerce tanaman website
+# BenihKu 🌱
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/60q6bhcrp-5346s-projects/v0-e-commerce-tanaman-website)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/NcUkDjBsQyt)
+Benihku merupakan website yang diperuntukan untuk membantu para penjual dan pembeli tanaman atau benih dalam mendapatkan informasi yang terkait mengenai tanaman, baik dapat membantu dalam penjualan produk sampai membantu pembeli dalam memilih dan mencari informasi tanaman yang mereka harapkan.
 
-## Overview
+Website BenihKu ini merupakan website yang berbasis Next.js-Typescript dengan Supabase database yang bersifat serverless.
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+## Features
 
-## Deployment
+* Authentication (sign-up, sign-in)
+* CRUD operations on tasks or items
+* Real-time updates via Supabase Realtime
+* Server-side rendering and API routes
+* Easy local development with remote Supabase
+ 
 
-Your project is live at:
+## Go to the page!
+Project dapat diakses pada link berikut: **[https://www.projectrpl.site/](https://www.projectrpl.site/)**
 
-**[https://vercel.com/60q6bhcrp-5346s-projects/v0-e-commerce-tanaman-website](https://vercel.com/60q6bhcrp-5346s-projects/v0-e-commerce-tanaman-website)**
+
+# How to run locally
+
+1. Clone this repository
+
+   ```bash
+   git clone https://github.com/NSP-MO/BenihKu-ProjectRPL.git
+   cd "BenihKu-ProjectRPL"
+   ```
+
+2. Edit the lib/supabase.ts for connecting a new supabase database.
+
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
+   # Optional (server-side only):
+   SUPABASE_SERVICE_KEY=<your-service-role-key>
+   ```
+
+3. Install dependencies
+
+   ```bash
+   pnpm install
+   ```
+
+4. Run the development server
+
+   ```bash
+   pnpm dev
+   ```
+
+5. Open the website in your browser at [http://localhost:3000](http://localhost:3000)
+
+
+## Prerequisites
+
+* Node.js v14+ or later
+* pnpm, npm, or yarn
+* A Supabase project with:
+
+  * Anonymouse public API key
+  * Service role key (for server-side operations)
+
+
+## Environment Variables
+
+| Key                               | Description                                         |
+| --------------------------------- | --------------------------------------------------- |
+| NEXT\_PUBLIC\_SUPABASE\_URL       | Your Supabase project URL                           |
+| NEXT\_PUBLIC\_SUPABASE\_ANON\_KEY | Your Supabase anonymous public API key              |
+| SUPABASE\_SERVICE\_KEY            | (Optional) Supabase service role key for server use |
+
+## Scripts
+
+* `pnpm dev` — Run in development mode
+* `pnpm build` — Build for production
+* `pnpm start` — Start the production server
+
 
 ## Build your app
 
-Continue building your app on:
+Continue building the app on:
 
-**[https://v0.dev/chat/projects/NcUkDjBsQyt](https://v0.dev/chat/projects/NcUkDjBsQyt)**
+**[https://v0.dev/chat/fork-of-e-commerce-tanaman-website-syeAQk0zVQk](https://v0.dev/chat/fork-of-e-commerce-tanaman-website-syeAQk0zVQk)**
 
 ## How It Works
 
