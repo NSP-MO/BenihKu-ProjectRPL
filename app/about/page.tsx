@@ -158,7 +158,7 @@ export default function AboutPage() {
                   <div>
                     <h3 className="font-semibold">Email</h3>
                     <p className="text-gray-500 dark:text-gray-400">
-                      info@BenihKu.id
+                      benihku.site@gmail.com
                     </p>
                   </div>
                 </div>
@@ -167,7 +167,7 @@ export default function AboutPage() {
                   <div>
                     <h3 className="font-semibold">Telepon</h3>
                     <p className="text-gray-500 dark:text-gray-400">
-                      +62 21 1234 5678
+                      +62 895 0757 4743
                     </p>
                   </div>
                 </div>
