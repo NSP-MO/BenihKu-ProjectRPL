@@ -13,6 +13,10 @@ export const metadata: Metadata = {
   title: "BenihKu - Toko Tanaman Online",
   description: "Temukan berbagai jenis tanaman berkualitas untuk mempercantik ruangan Anda",
   generator: "v0.dev",
+  icons: {
+    icon: [{ url: "/favicon.png" }],
+    apple: [{ url: "/favicon.png" }],
+  },
 }
 
 export default function RootLayout({

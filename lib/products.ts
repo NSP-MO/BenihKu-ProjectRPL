@@ -10,7 +10,7 @@ export type Product = {
   image: string
   category: string
   description: string
-  is_popular: boolean; 
+  is_popular: boolean
   is_published?: boolean
   stock?: number
   image_path?: string
@@ -28,18 +28,14 @@ export type Product = {
     rating: number
     response_time: string
   }
-  status?: string; 
+  status?: string
 }
 
 // ... (getProducts, getProductById, getProductsByCategory remain the same) ...
 export async function getProducts() {
   const supabase = createServerSupabaseClient()
   try {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("is_published", true)
-      .order("id")
+    const { data, error } = await supabase.from("products").select("*").eq("is_published", true).order("id")
     if (error) {
       if (error.message.includes("relation") && error.message.includes("does not exist")) {
         console.error("Products table does not exist. Please run the setup process.")
@@ -58,15 +54,11 @@ export async function getProducts() {
 export async function getProductById(id: number): Promise<Product | null> {
   const supabase = createServerSupabaseClient()
   try {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("id", id)
-      .single() 
+    const { data, error } = await supabase.from("products").select("*").eq("id", id).single()
     if (error) {
-      if (error.code === 'PGRST116') {
-        console.log(`No product found with id ${id}`);
-        return null;
+      if (error.code === "PGRST116") {
+        console.log(`No product found with id ${id}`)
+        return null
       }
       console.error(`Error fetching product with id ${id}:`, error)
       return null
@@ -101,24 +93,25 @@ export async function getProductsByCategory(category: string) {
   }
 }
 // Updated function
-export async function getPopularProducts() { // Removed explicit limit parameter
-  const supabase = createServerSupabaseClient();
-  let limit = 6; // Default limit
+export async function getPopularProducts() {
+  // Removed explicit limit parameter
+  const supabase = createServerSupabaseClient()
+  let limit = 6 // Default limit
 
   try {
-    const limitSetting = await getSetting('homepage_product_limit');
-    if (limitSetting && !isNaN(parseInt(limitSetting))) {
-      limit = parseInt(limitSetting);
+    const limitSetting = await getSetting("homepage_product_limit")
+    if (limitSetting && !isNaN(Number.parseInt(limitSetting))) {
+      limit = Number.parseInt(limitSetting)
     }
   } catch (e) {
-    console.error("Failed to fetch homepage_product_limit setting, using default:", e);
+    console.error("Failed to fetch homepage_product_limit setting, using default:", e)
   }
 
   try {
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .eq("is_popular", true) 
+      .eq("is_popular", true)
       .eq("is_published", true)
       .limit(limit) // Use the fetched or default limit
 
@@ -134,5 +127,40 @@ export async function getPopularProducts() { // Removed explicit limit parameter
   } catch (error) {
     console.error("Error fetching popular products:", error)
     return []
+  }
+}
+
+// New function to get all unique categories
+export async function getAllCategories(): Promise<string[]> {
+  const supabase = createServerSupabaseClient()
+  try {
+    // First try to get distinct categories
+    const { data, error } = await supabase
+      .from("products")
+      .select("category")
+      .not("category", "is", null)
+      .order("category")
+
+    if (error) {
+      console.error("Error fetching categories:", error)
+      // Return default categories as fallback
+      return ["Tanaman Hias", "Tanaman Indoor", "Tanaman Outdoor", "Tanaman Gantung", "Kaktus & Sukulen"]
+    }
+
+    // Extract unique categories
+    const categories = [...new Set(data.map((item) => item.category))]
+      .filter(Boolean) // Remove empty strings
+      .sort() // Sort alphabetically
+
+    // If no categories found, return default list
+    if (categories.length === 0) {
+      return ["Tanaman Hias", "Tanaman Indoor", "Tanaman Outdoor", "Tanaman Gantung", "Kaktus & Sukulen"]
+    }
+
+    return categories
+  } catch (error) {
+    console.error("Error fetching categories:", error)
+    // Return default categories as fallback
+    return ["Tanaman Hias", "Tanaman Indoor", "Tanaman Outdoor", "Tanaman Gantung", "Kaktus & Sukulen"]
   }
 }

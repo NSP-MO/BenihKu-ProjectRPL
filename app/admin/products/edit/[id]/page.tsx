@@ -13,12 +13,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ProtectedRoute from "@/components/protected-route"
-import { getProductById } from "@/lib/products"
+import { getProductById, getAllCategories } from "@/lib/products"
 import { updateProduct } from "@/lib/admin"
 import { ImageUpload } from "@/components/image-upload"
 import { toast } from "@/components/ui/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { Product } from "@/lib/products"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function EditProductPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -26,10 +27,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  
+  const [categories, setCategories] = useState<string[]>([])
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | undefined>(undefined)
   const [uploadedImagePath, setUploadedImagePath] = useState<string | undefined>(undefined)
-  const [uploadedImageBucket, setUploadedImageBucket] = useState<string| undefined>(undefined)
+  const [uploadedImageBucket, setUploadedImageBucket] = useState<string | undefined>(undefined)
 
   const [product, setProduct] = useState<Partial<Product>>({
     id: productId,
@@ -43,16 +46,43 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     is_popular: false,
     // show_on_homepage: false, // Removed
     care_instructions: {
-      light: "", water: "", soil: "", humidity: "", temperature: "", fertilizer: "",
+      light: "",
+      water: "",
+      soil: "",
+      humidity: "",
+      temperature: "",
+      fertilizer: "",
     },
   })
 
+  // Load categories
+  useEffect(() => {
+    const loadCategories = async () => {
+      setIsLoadingCategories(true)
+      try {
+        const fetchedCategories = await getAllCategories()
+        setCategories(fetchedCategories)
+      } catch (error) {
+        console.error("Failed to load categories:", error)
+        toast({
+          title: "Error",
+          description: "Gagal memuat kategori. Menggunakan daftar default.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingCategories(false)
+      }
+    }
+
+    loadCategories()
+  }, [])
+
   useEffect(() => {
     if (!productId) {
-        toast({title: "Error", description: "Invalid Product ID.", variant: "destructive"})
-        setIsLoading(false);
-        return;
-    };
+      toast({ title: "Error", description: "Invalid Product ID.", variant: "destructive" })
+      setIsLoading(false)
+      return
+    }
     const loadProduct = async () => {
       setIsLoading(true)
       try {
@@ -63,17 +93,23 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             is_published: productData.is_published !== undefined ? productData.is_published : true,
             is_popular: !!productData.is_popular,
             // show_on_homepage: !!productData.show_on_homepage, // Removed
-            care_instructions: productData.care_instructions || { light: "", water: "", soil: "", humidity: "", temperature: "", fertilizer: "" },
-          });
-          if (productData.image) setUploadedImageUrl(productData.image);
-          if (productData.image_path) setUploadedImagePath(productData.image_path);
-          if (productData.image_bucket) setUploadedImageBucket(productData.image_bucket);
-
+            care_instructions: productData.care_instructions || {
+              light: "",
+              water: "",
+              soil: "",
+              humidity: "",
+              temperature: "",
+              fertilizer: "",
+            },
+          })
+          if (productData.image) setUploadedImageUrl(productData.image)
+          if (productData.image_path) setUploadedImagePath(productData.image_path)
+          if (productData.image_bucket) setUploadedImageBucket(productData.image_bucket)
         } else {
-          toast({title: "Error", description: "Produk tidak ditemukan", variant: "destructive"})
+          toast({ title: "Error", description: "Produk tidak ditemukan", variant: "destructive" })
         }
       } catch (loadError: any) {
-        toast({title: "Error", description: `Gagal memuat produk: ${loadError.message}`, variant: "destructive"})
+        toast({ title: "Error", description: `Gagal memuat produk: ${loadError.message}`, variant: "destructive" })
       } finally {
         setIsLoading(false)
       }
@@ -82,61 +118,64 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   }, [productId])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    const numValue = (name === 'price' || name === 'stock') ? parseFloat(value) : undefined;
-    setProduct(prev => ({ ...prev, [name]: numValue !== undefined && !isNaN(numValue) ? numValue : value }));
-  };
+    const { name, value } = e.target
+    const numValue = name === "price" || name === "stock" ? Number.parseFloat(value) : undefined
+    setProduct((prev) => ({ ...prev, [name]: numValue !== undefined && !isNaN(numValue) ? numValue : value }))
+  }
 
-  const handleCheckboxChange = (name: 'is_popular' | 'is_published', checked: boolean | string) => { // Removed show_on_homepage
-     setProduct((prev) => ({ ...prev, [name]: !!checked }));
-  };
-  
-  const handleSelectChange = (name: 'category' | 'status', value: string) => {
-    if (name === 'status') {
-      setProduct(prev => ({ ...prev, is_published: value === 'published' }));
+  const handleCheckboxChange = (name: "is_popular" | "is_published", checked: boolean | string) => {
+    // Removed show_on_homepage
+    setProduct((prev) => ({ ...prev, [name]: !!checked }))
+  }
+
+  const handleSelectChange = (name: "category" | "status", value: string) => {
+    if (name === "status") {
+      setProduct((prev) => ({ ...prev, is_published: value === "published" }))
     } else {
-      setProduct(prev => ({ ...prev, [name]: value }));
+      setProduct((prev) => ({ ...prev, [name]: value }))
     }
-  };
-  
+  }
+
   const handleCareInstructionsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target
     setProduct((prev) => ({
       ...prev,
       care_instructions: {
-        ...(prev.care_instructions || {}), 
+        ...(prev.care_instructions || {}),
         [name]: value,
       },
-    }));
-  };
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSaving(true)
 
     try {
-      const productDataToUpdate: Partial<Product> = { ...product };
-      if (typeof productDataToUpdate.price === 'string') productDataToUpdate.price = parseFloat(productDataToUpdate.price) || 0;
-      if (typeof productDataToUpdate.stock === 'string') productDataToUpdate.stock = parseInt(productDataToUpdate.stock, 10) || 0;
-      
+      const productDataToUpdate: Partial<Product> = { ...product }
+      if (typeof productDataToUpdate.price === "string")
+        productDataToUpdate.price = Number.parseFloat(productDataToUpdate.price) || 0
+      if (typeof productDataToUpdate.stock === "string")
+        productDataToUpdate.stock = Number.parseInt(productDataToUpdate.stock, 10) || 0
+
       // delete productDataToUpdate.show_on_homepage; // Ensure this field is not sent if column was removed
 
       if (uploadedImageUrl && uploadedImageUrl !== product.image) {
-          productDataToUpdate.image = uploadedImageUrl;
-          productDataToUpdate.image_path = uploadedImagePath;
-          productDataToUpdate.image_bucket = uploadedImageBucket;
+        productDataToUpdate.image = uploadedImageUrl
+        productDataToUpdate.image_path = uploadedImagePath
+        productDataToUpdate.image_bucket = uploadedImageBucket
       }
 
       const { success: updateSuccess, error: updateError } = await updateProduct(productId, productDataToUpdate)
 
       if (updateSuccess) {
         toast({ title: "Sukses", description: "Produk berhasil disimpan!" })
-        router.push("/admin/dashboard") 
+        router.push("/admin/dashboard")
       } else {
         toast({ title: "Error", description: updateError || "Gagal menyimpan.", variant: "destructive" })
       }
     } catch (err: any) {
-      toast({ title: "Error", description: err.message || "Gagal menyimpan.", variant: "destructive"})
+      toast({ title: "Error", description: err.message || "Gagal menyimpan.", variant: "destructive" })
     } finally {
       setIsSaving(false)
     }
@@ -155,17 +194,29 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Edit Produk: {product.name || `ID ${productId}`}</h1>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => router.push("/admin/dashboard")}>Batal</Button>
+            <Button variant="outline" onClick={() => router.push("/admin/dashboard")}>
+              Batal
+            </Button>
             <Button className="bg-green-600 hover:bg-green-700" onClick={handleSubmit} disabled={isSaving || isLoading}>
-              {isSaving ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...</>) : "Simpan Perubahan"}
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...
+                </>
+              ) : (
+                "Simpan Perubahan"
+              )}
             </Button>
           </div>
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-green-600" /></div>
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+          </div>
         ) : !product.id ? (
-             <Alert variant="destructive"><AlertDescription>Produk tidak ditemukan atau gagal dimuat.</AlertDescription></Alert>
+          <Alert variant="destructive">
+            <AlertDescription>Produk tidak ditemukan atau gagal dimuat.</AlertDescription>
+          </Alert>
         ) : (
           <Tabs defaultValue="basic" className="w-full">
             <TabsList className="mb-6">
@@ -188,40 +239,71 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="price">Harga (Rp)</Label>
-                      <Input id="price" name="price" type="number" value={product.price || 0} onChange={handleInputChange} required />
+                      <Input
+                        id="price"
+                        name="price"
+                        type="number"
+                        value={product.price || 0}
+                        onChange={handleInputChange}
+                        required
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="category">Kategori</Label>
-                      <Select value={product.category || ""} onValueChange={(value) => handleSelectChange("category", value)}>
-                        <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+                      <Select
+                        value={product.category || ""}
+                        onValueChange={(value) => handleSelectChange("category", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={isLoadingCategories ? "Memuat kategori..." : "Pilih kategori"} />
+                        </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Tanaman Hias">Tanaman Hias</SelectItem>
-                          <SelectItem value="Tanaman Indoor">Tanaman Indoor</SelectItem>
-                           <SelectItem value="Tanaman Outdoor">Tanaman Outdoor</SelectItem>
-                          <SelectItem value="Tanaman Gantung">Tanaman Gantung</SelectItem>
-                          <SelectItem value="Kaktus & Sukulen">Kaktus & Sukulen</SelectItem>
+                          {isLoadingCategories ? (
+                            <div className="flex items-center justify-center p-2">
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              <span>Memuat kategori...</span>
+                            </div>
+                          ) : (
+                            categories.map((category) => (
+                              <SelectItem key={category} value={category}>
+                                {category}
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="stock">Stok</Label>
-                      <Input id="stock" name="stock" type="number" value={product.stock || 0} onChange={handleInputChange} required />
+                      <Input
+                        id="stock"
+                        name="stock"
+                        type="number"
+                        value={product.stock || 0}
+                        onChange={handleInputChange}
+                        required
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                     <div className="space-y-2">
                       <Label htmlFor="status">Status Publikasi</Label>
-                      <Select value={product.is_published ? "published" : "draft"} onValueChange={(value) => handleSelectChange("status", value)}>
-                        <SelectTrigger><SelectValue placeholder="Pilih status" /></SelectTrigger>
+                      <Select
+                        value={product.is_published ? "published" : "draft"}
+                        onValueChange={(value) => handleSelectChange("status", value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih status" />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="published">Dipublikasikan</SelectItem>
                           <SelectItem value="draft">Draft</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                     <div className="flex items-center space-x-2 pt-4 md:pt-8">
+                    <div className="flex items-center space-x-2 pt-4 md:pt-8">
                       <Checkbox
                         id="is_popular"
                         checked={!!product.is_popular}
@@ -233,7 +315,14 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   {/* Removed show_on_homepage checkbox */}
                   <div className="space-y-2">
                     <Label htmlFor="description">Deskripsi</Label>
-                    <Textarea id="description" name="description" value={product.description || ""} onChange={handleInputChange} rows={5} required />
+                    <Textarea
+                      id="description"
+                      name="description"
+                      value={product.description || ""}
+                      onChange={handleInputChange}
+                      rows={5}
+                      required
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -246,29 +335,33 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   <CardDescription>Detail cara merawat tanaman.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {Object.entries(product.care_instructions || {}).map(([key, value]) => (
-                         <div className="space-y-2" key={key}>
-                            <Label htmlFor={key} className="capitalize">{key.replace(/([A-Z])/g, ' $1')}</Label>
-                            <Textarea
-                            id={key}
-                            name={key}
-                            value={value as string || ""}
-                            onChange={handleCareInstructionsChange}
-                            rows={2}
-                            />
+                  {Object.entries(product.care_instructions || {}).map(([key, value]) => (
+                    <div className="space-y-2" key={key}>
+                      <Label htmlFor={key} className="capitalize">
+                        {key.replace(/([A-Z])/g, " $1")}
+                      </Label>
+                      <Textarea
+                        id={key}
+                        name={key}
+                        value={(value as string) || ""}
+                        onChange={handleCareInstructionsChange}
+                        rows={2}
+                      />
+                    </div>
+                  ))}
+                  {["light", "water", "soil", "humidity", "temperature", "fertilizer"].map((key) => {
+                    if (!product.care_instructions || !(key in product.care_instructions)) {
+                      return (
+                        <div className="space-y-2" key={key}>
+                          <Label htmlFor={key} className="capitalize">
+                            {key}
+                          </Label>
+                          <Textarea id={key} name={key} value={""} onChange={handleCareInstructionsChange} rows={2} />
                         </div>
-                    ))}
-                     {['light', 'water', 'soil', 'humidity', 'temperature', 'fertilizer'].map(key => {
-                        if (!product.care_instructions || !(key in product.care_instructions)) {
-                            return (
-                                <div className="space-y-2" key={key}>
-                                    <Label htmlFor={key} className="capitalize">{key}</Label>
-                                    <Textarea id={key} name={key} value={""} onChange={handleCareInstructionsChange} rows={2}/>
-                                </div>
-                            );
-                        }
-                        return null;
-                    })}
+                      )
+                    }
+                    return null
+                  })}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -283,14 +376,14 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   <ImageUpload
                     currentImage={product.image || uploadedImageUrl}
                     onImageUploaded={(url, path, bucket) => {
-                      setUploadedImageUrl(url);
-                      setUploadedImagePath(path);
-                      if (bucket) setUploadedImageBucket(bucket);
-                      setProduct(prev => ({ ...prev, image: url, image_path: path, image_bucket: bucket }));
+                      setUploadedImageUrl(url)
+                      setUploadedImagePath(path)
+                      if (bucket) setUploadedImageBucket(bucket)
+                      setProduct((prev) => ({ ...prev, image: url, image_path: path, image_bucket: bucket }))
                       toast({ title: "Sukses", description: "Gambar berhasil diunggah!" })
                     }}
-                    onError={(errorMsg) => { 
-                        toast({ title: "Error", description: errorMsg, variant: "destructive"})
+                    onError={(errorMsg) => {
+                      toast({ title: "Error", description: errorMsg, variant: "destructive" })
                     }}
                   />
                 </CardContent>

@@ -119,11 +119,11 @@ export default function AdminDashboard() {
                 Analitik
               </Link>
               <Link
-                href="/admin/setup"
+                href="/admin/settings"
                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all"
               >
                 <Settings className="h-4 w-4" />
-                Setup
+                Pengaturan
               </Link>
             </nav>
           </div>
@@ -189,7 +189,7 @@ export default function AdminDashboard() {
             </div>
 
             <Tabs defaultValue="all" className="w-full">
-              <TabsList>
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="all">Semua Produk</TabsTrigger>
                 <TabsTrigger value="published">Dipublikasikan</TabsTrigger>
                 <TabsTrigger value="draft">Draft</TabsTrigger>
@@ -253,8 +253,8 @@ function ProductsTable({ products, isLoading, toggleHomepageDisplay }: ProductsT
       <div className="relative w-full overflow-auto">
         <table className="w-full caption-bottom text-sm">
           <thead>
-            <tr>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
+            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted dark:border-gray-800">
+              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[80px]">ID</th>
               <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nama Produk</th>
               <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Kategori</th>
               <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Harga</th>
@@ -263,7 +263,7 @@ function ProductsTable({ products, isLoading, toggleHomepageDisplay }: ProductsT
               <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                 Tampilkan di Homepage
               </th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Aksi</th>
+              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[100px]">Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -288,17 +288,17 @@ function ProductsTable({ products, isLoading, toggleHomepageDisplay }: ProductsT
                     {product.status === "published" ? "Dipublikasikan" : "Draft"}
                   </span>
                 </td>
-                <td className="p-4 align-middle">
+                <td className="p-4 align-middle text-center">
                   <Badge
                     variant={product.is_popular ? "default" : "outline"}
-                    className="cursor-pointer"
+                    className="cursor-pointer mx-auto"
                     onClick={() => toggleHomepageDisplay(product.id, product.is_popular)}
                   >
                     {product.is_popular ? "Ya" : "Tidak"}
                   </Badge>
                 </td>
                 <td className="p-4 align-middle">
-                  <div className="flex gap-2">
+                  <div className="flex justify-center">
                     <Link href={`/admin/products/edit/${product.id}`}>
                       <Button variant="outline" size="sm">
                         Edit
