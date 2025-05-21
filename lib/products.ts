@@ -1,6 +1,7 @@
 "use server"
 
 import { createServerSupabaseClient } from "@/lib/supabase"
+import { getSetting } from "@/lib/settings" // Import the new getSetting function
 
 export type Product = {
   id: number
@@ -9,12 +10,11 @@ export type Product = {
   image: string
   category: string
   description: string
-  is_popular: boolean; // This is the primary flag for homepage "Tanaman Populer"
+  is_popular: boolean; 
   is_published?: boolean
   stock?: number
   image_path?: string
   image_bucket?: string
-  // show_on_homepage?: boolean; // This can be removed if is_popular serves the purpose
   care_instructions?: {
     light: string
     water: string
@@ -31,16 +31,15 @@ export type Product = {
   status?: string; 
 }
 
+// ... (getProducts, getProductById, getProductsByCategory remain the same) ...
 export async function getProducts() {
   const supabase = createServerSupabaseClient()
-
   try {
     const { data, error } = await supabase
       .from("products")
-      .select("*") // Will select is_popular by default
+      .select("*")
       .eq("is_published", true)
       .order("id")
-
     if (error) {
       if (error.message.includes("relation") && error.message.includes("does not exist")) {
         console.error("Products table does not exist. Please run the setup process.")
@@ -61,10 +60,9 @@ export async function getProductById(id: number): Promise<Product | null> {
   try {
     const { data, error } = await supabase
       .from("products")
-      .select("*") // Will select is_popular by default
+      .select("*")
       .eq("id", id)
       .single() 
-
     if (error) {
       if (error.code === 'PGRST116') {
         console.log(`No product found with id ${id}`);
@@ -80,16 +78,49 @@ export async function getProductById(id: number): Promise<Product | null> {
   }
 }
 
-// This function will be used by the homepage's "Tanaman Populer" section
-export async function getPopularProducts(limit = 6) {
+export async function getProductsByCategory(category: string) {
   const supabase = createServerSupabaseClient()
   try {
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .eq("is_popular", true) // Filter by is_popular
+      .eq("category", category)
       .eq("is_published", true)
-      .limit(limit)
+    if (error) {
+      if (error.message.includes("relation") && error.message.includes("does not exist")) {
+        console.error("Products table does not exist. Please run the setup process.")
+        return []
+      }
+      console.error(`Error fetching products in category ${category}:`, error)
+      return []
+    }
+    return data as Product[]
+  } catch (error) {
+    console.error(`Error fetching products in category ${category}:`, error)
+    return []
+  }
+}
+// Updated function
+export async function getPopularProducts() { // Removed explicit limit parameter
+  const supabase = createServerSupabaseClient();
+  let limit = 6; // Default limit
+
+  try {
+    const limitSetting = await getSetting('homepage_product_limit');
+    if (limitSetting && !isNaN(parseInt(limitSetting))) {
+      limit = parseInt(limitSetting);
+    }
+  } catch (e) {
+    console.error("Failed to fetch homepage_product_limit setting, using default:", e);
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("is_popular", true) 
+      .eq("is_published", true)
+      .limit(limit) // Use the fetched or default limit
 
     if (error) {
       if (error.message.includes("relation") && error.message.includes("does not exist")) {
@@ -102,31 +133,6 @@ export async function getPopularProducts(limit = 6) {
     return data as Product[]
   } catch (error) {
     console.error("Error fetching popular products:", error)
-    return []
-  }
-}
-
-
-export async function getProductsByCategory(category: string) {
-  const supabase = createServerSupabaseClient()
-  try {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("category", category)
-      .eq("is_published", true)
-
-    if (error) {
-      if (error.message.includes("relation") && error.message.includes("does not exist")) {
-        console.error("Products table does not exist. Please run the setup process.")
-        return []
-      }
-      console.error(`Error fetching products in category ${category}:`, error)
-      return []
-    }
-    return data as Product[]
-  } catch (error) {
-    console.error(`Error fetching products in category ${category}:`, error)
     return []
   }
 }
