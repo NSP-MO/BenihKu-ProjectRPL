@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Leaf, Package, LogOut, BarChart3, Settings, ShoppingBag } from "lucide-react"
+import { Leaf, Package, LogOut, BarChart3, Settings, ShoppingBag, ArrowLeft } from "lucide-react"
 import { format } from "date-fns"
 
 import { Button } from "@/components/ui/button"
@@ -12,28 +12,48 @@ import ProtectedRoute from "@/components/protected-route"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import type { Order, OrderStatus } from "@/lib/orders"
+import type { OrderStatus } from "@/lib/orders"
+
+interface DisplayOrder {
+  id: string;
+  user_id: string;
+  customer_name?: string;
+  customer_email?: string;
+  created_at: string;
+  total_amount: number;
+  status: OrderStatus;
+}
 
 export default function AdminOrdersPage() {
   const { user, logout } = useAuth()
   const router = useRouter()
-  const [orders, setOrders] = useState<Order[]>([])
+  const [orders, setOrders] = useState<DisplayOrder[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchOrders = async () => {
       setIsLoading(true)
       try {
-        const { data, error } = await supabase.from("orders").select("*").order("created_at", { ascending: false })
+        const { data, error } = await supabase
+          .from("orders")
+          .select("id, user_id, created_at, total_amount, status, customer_name, customer_email")
+          .order("created_at", { ascending: false })
 
         if (error) {
           console.error("Error fetching orders:", error)
+          setOrders([]) // Set to empty array on error
           return
         }
+        
+        if (data) {
+            setOrders(data as DisplayOrder[]);
+        } else {
+            setOrders([]);
+        }
 
-        setOrders(data)
       } catch (error) {
         console.error("Error fetching orders:", error)
+        setOrders([]) // Set to empty array on error
       } finally {
         setIsLoading(false)
       }
@@ -67,7 +87,6 @@ export default function AdminOrdersPage() {
   return (
     <ProtectedRoute adminOnly>
       <div className="flex min-h-screen">
-        {/* Sidebar */}
         <div className="hidden md:flex w-64 flex-col bg-background border-r dark:border-gray-800">
           <div className="flex h-16 items-center border-b dark:border-gray-800 px-6">
             <Link href="/" className="flex items-center gap-2 font-semibold">
@@ -131,8 +150,6 @@ export default function AdminOrdersPage() {
             </Button>
           </div>
         </div>
-
-        {/* Main content */}
         <div className="flex-1">
           <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b dark:border-gray-800 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
             <div className="md:hidden flex items-center gap-2 font-semibold">
@@ -151,7 +168,6 @@ export default function AdminOrdersPage() {
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold">Manajemen Pesanan</h1>
             </div>
-
             {isLoading ? (
               <div className="flex justify-center items-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-green-600" />
@@ -168,47 +184,35 @@ export default function AdminOrdersPage() {
                       <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted dark:border-gray-800">
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Tanggal</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                          Pelanggan
-                        </th>
+                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Pelanggan</th>
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Total</th>
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Aksi</th>
                       </tr>
                     </thead>
-                    <tbody className="[&_tr:last-child]:border-0">
-                      {orders.map((order) => (
-                        <tr
-                          key={order.id}
-                          className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted dark:border-gray-800"
-                        >
+                    {/* Ensure no whitespace directly inside tbody other than the map function's return */}
+                    <tbody className="[&_tr:last-child]:border-0">{
+                      orders.map((order) => (
+                        <tr key={order.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted dark:border-gray-800">
                           <td className="p-4 align-middle font-mono text-xs">{order.id.substring(0, 8)}...</td>
+                          <td className="p-4 align-middle">{format(new Date(order.created_at), "dd MMM yyyy HH:mm")}</td>
+                          <td className="p-4 align-middle">{order.customer_name || order.customer_email || order.user_id.substring(0,8)+"..."}</td>
+                          <td className="p-4 align-middle font-medium">Rp {order.total_amount.toLocaleString("id-ID")}</td>
                           <td className="p-4 align-middle">
-                            {format(new Date(order.created_at), "dd MMM yyyy HH:mm")}
-                          </td>
-                          <td className="p-4 align-middle">{order.user_id.substring(0, 8)}...</td>
-                          <td className="p-4 align-middle font-medium">Rp {order.total.toLocaleString("id-ID")}</td>
-                          <td className="p-4 align-middle">
-                            <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeColor(
-                                order.status as OrderStatus,
-                              )}`}
-                            >
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeColor(order.status as OrderStatus)}`}>
                               {order.status}
                             </span>
                           </td>
                           <td className="p-4 align-middle">
                             <div className="flex gap-2">
                               <Link href={`/admin/orders/${order.id}`}>
-                                <Button variant="outline" size="sm">
-                                  Detail
-                                </Button>
+                                <Button variant="outline" size="sm">Detail</Button>
                               </Link>
                             </div>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
+                      ))
+                    }</tbody>
                   </table>
                 </div>
               </div>
