@@ -1,7 +1,7 @@
 "use server"
 
 import { createServerSupabaseClient } from "@/lib/supabase"
-import { noStore } from 'next/cache'; // Import noStore
+import { noStore } from 'next/cache';
 
 export type ProductAnalyticsData = {
   id: number
@@ -24,8 +24,8 @@ export async function getRealAnalytics(): Promise<{
   categories: CategoryAnalyticsData[],
   overall: { totalSales: number, totalRevenue: number }
 }> {
-  noStore(); // Panggil noStore di awal fungsi untuk mencegah caching
-  console.log("getRealAnalytics: (noStore active) Fetching new analytics data at", new Date().toISOString());
+  noStore(); 
+  console.log("getRealAnalytics: Fetching new analytics data at", new Date().toISOString());
   
   const supabase = createServerSupabaseClient();
   try {
@@ -35,12 +35,12 @@ export async function getRealAnalytics(): Promise<{
 
     if (productsError) {
       console.error("getRealAnalytics: Error fetching products:", productsError.message)
-      throw productsError
+      throw productsError // Lempar error agar ditangkap oleh catch utama
     }
-    console.log("getRealAnalytics: Fetched productsData count:", productsData?.length ?? 0);
+    console.log(`getRealAnalytics: Fetched ${productsData?.length ?? 0} products.`);
 
-    if (!productsData) {
-        console.warn("getRealAnalytics: No product data returned.")
+    if (!productsData || productsData.length === 0) { // Periksa jika productsData kosong
+        console.warn("getRealAnalytics: No product data returned or products table is empty. Returning empty analytics.")
         return { products: [], categories: [], overall: { totalSales: 0, totalRevenue: 0 } };
     }
 
@@ -50,66 +50,75 @@ export async function getRealAnalytics(): Promise<{
 
     if (orderItemsError) {
       console.error("getRealAnalytics: Error fetching order items:", orderItemsError.message)
-      throw orderItemsError
+      throw orderItemsError // Lempar error
     }
-    console.log("getRealAnalytics: Fetched orderItemsData count:", orderItemsData?.length ?? 0);
+    console.log(`getRealAnalytics: Fetched ${orderItemsData?.length ?? 0} order items.`);
 
 
-    if (!orderItemsData) {
-      console.warn("getRealAnalytics: No order items data returned.");
-       return {
-          products: productsData.map(p => ({
-            id: p.id,
-            name: p.name,
-            sales: 0,
-            revenue: 0,
-          })),
-          categories: [],
-          overall: { totalSales: 0, totalRevenue: 0 }
-        };
-    }
-
-    const productAnalyticsMap = new Map<number, ProductAnalyticsData>()
-
-    productsData.forEach(p => {
-      productAnalyticsMap.set(p.id, {
+    if (!orderItemsData || orderItemsData.length === 0) { // Periksa jika orderItemsData kosong
+      console.warn("getRealAnalytics: No order items data returned. Products will have 0 sales/revenue.");
+      // Jika tidak ada item pesanan, kita tetap bisa menampilkan produk dengan sales/revenue 0
+      const productsWithNoSales = productsData.map(p => ({
         id: p.id,
         name: p.name,
         sales: 0,
         revenue: 0,
-      })
-    })
+      }));
+      // Kategori juga akan memiliki sales/revenue 0
+      const categoryAnalyticsMap = new Map<string, CategoryAnalyticsData>()
+      productsData.forEach(p => {
+        if (!p.category) return; 
+        if (!categoryAnalyticsMap.has(p.category)) {
+            categoryAnalyticsMap.set(p.category, {
+            id: p.category,
+            category: p.category,
+            productCount: 0,
+            sales: 0,
+            revenue: 0,
+            });
+        }
+        const ca = categoryAnalyticsMap.get(p.category)!
+        ca.productCount +=1;
+      });
+      const categoriesWithNoSales = Array.from(categoryAnalyticsMap.values()).map(c => ({...c, avgRevenuePerProduct: 0}));
+
+      return {
+          products: productsWithNoSales,
+          categories: categoriesWithNoSales,
+          overall: { totalSales: 0, totalRevenue: 0 }
+      };
+    }
+
+    // --- Pemrosesan data ---
+    const productAnalyticsMap = new Map<number, ProductAnalyticsData>()
+    productsData.forEach(p => {
+      productAnalyticsMap.set(p.id, { id: p.id, name: p.name, sales: 0, revenue: 0 });
+    });
 
     orderItemsData.forEach(item => {
       if (item.product_id === null) return;
-
-      const pa = productAnalyticsMap.get(item.product_id)
+      const pa = productAnalyticsMap.get(item.product_id);
       if (pa) {
-        pa.sales += item.quantity
+        pa.sales += item.quantity;
         const itemRevenue = typeof item.subtotal === 'number' ? item.subtotal : (typeof item.price === 'number' ? item.price * item.quantity : 0);
         pa.revenue += itemRevenue;
       } else {
          if (item.product_id && item.product_name) {
-            const currentProductEntry = productAnalyticsMap.get(item.product_id);
-            if (currentProductEntry) {
-                currentProductEntry.sales += item.quantity;
-                currentProductEntry.revenue += typeof item.subtotal === 'number' ? item.subtotal : (typeof item.price === 'number' ? item.price * item.quantity : 0);
-            } else {
-                 productAnalyticsMap.set(item.product_id, {
-                    id: item.product_id,
-                    name: `${item.product_name} (Data Pesanan)`,
-                    sales: item.quantity,
-                    revenue: typeof item.subtotal === 'number' ? item.subtotal : (typeof item.price === 'number' ? item.price * item.quantity : 0),
-                });
-            }
+            // Jika produk tidak ada di map (misal, produk telah dihapus), kita bisa menambahkannya
+            // Atau log sebagai peringatan
+            console.warn(`Product with ID ${item.product_id} (${item.product_name}) found in order_items but not in products master list. Adding to analytics.`);
+            productAnalyticsMap.set(item.product_id, {
+                id: item.product_id,
+                name: `${item.product_name} (From Orders)`,
+                sales: item.quantity,
+                revenue: typeof item.subtotal === 'number' ? item.subtotal : (typeof item.price === 'number' ? item.price * item.quantity : 0),
+            });
          }
       }
-    })
-
+    });
     const finalProductAnalytics = Array.from(productAnalyticsMap.values());
 
     const categoryAnalyticsMap = new Map<string, CategoryAnalyticsData>()
-
     productsData.forEach(p => {
       if (!p.category) return; 
       if (!categoryAnalyticsMap.has(p.category)) {
@@ -119,35 +128,36 @@ export async function getRealAnalytics(): Promise<{
           productCount: 0,
           sales: 0,
           revenue: 0,
-        })
+        });
       }
-      const ca = categoryAnalyticsMap.get(p.category)!
+      const ca = categoryAnalyticsMap.get(p.category)!;
       ca.productCount +=1;
     });
 
     orderItemsData.forEach(item => {
       if (item.product_id === null) return;
-      const productDetails = productsData.find(p => p.id === item.product_id)
+      const productDetails = productsData.find(p => p.id === item.product_id);
       if (productDetails && productDetails.category) {
-        const ca = categoryAnalyticsMap.get(productDetails.category)
+        const ca = categoryAnalyticsMap.get(productDetails.category);
         if (ca) {
-          ca.sales += item.quantity
+          ca.sales += item.quantity;
           const itemRevenue = typeof item.subtotal === 'number' ? item.subtotal : (typeof item.price === 'number' ? item.price * item.quantity : 0);
           ca.revenue += itemRevenue;
         }
       }
-    })
-
+    });
     const finalCategoryAnalytics = Array.from(categoryAnalyticsMap.values()).map(c => ({
         ...c,
         avgRevenuePerProduct: c.productCount > 0 ? Math.round(c.revenue / c.productCount) : 0
     }));
 
-    const totalSales = finalProductAnalytics.reduce((sum, p) => sum + p.sales, 0)
-    const totalRevenue = finalProductAnalytics.reduce((sum, p) => sum + p.revenue, 0)
+    const totalSales = finalProductAnalytics.reduce((sum, p) => sum + p.sales, 0);
+    const totalRevenue = finalProductAnalytics.reduce((sum, p) => sum + p.revenue, 0);
     
     console.log("getRealAnalytics: Processed finalProductAnalytics count:", finalProductAnalytics.length);
     console.log("getRealAnalytics: Processed finalCategoryAnalytics count:", finalCategoryAnalytics.length);
+    console.log("getRealAnalytics: Overall - Total Sales:", totalSales, "Total Revenue:", totalRevenue);
+
 
     return {
       products: finalProductAnalytics,
@@ -157,6 +167,7 @@ export async function getRealAnalytics(): Promise<{
 
   } catch (error: any) {
     console.error("getRealAnalytics: Critical error during execution:", error.message)
+    // Mengembalikan struktur data default jika terjadi error kritikal
     return {
       products: [],
       categories: [],
