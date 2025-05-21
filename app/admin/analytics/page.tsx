@@ -1,96 +1,166 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
+import Link from "next/link" // Ditambahkan Link
+import { useRouter } from "next/navigation" // Ditambahkan useRouter
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import AnalyticsChart from "@/components/analytics-chart"
-import { Loader2 } from "lucide-react"
+import { Loader2, ArrowUp, ArrowDown, ArrowUpDown, ArrowLeft } from "lucide-react" // Ditambahkan ArrowLeft
 import ProtectedRoute from "@/components/protected-route"
+import { getRealAnalytics, type ProductAnalyticsData, type CategoryAnalyticsData } from "@/lib/analytics"
+import { Button } from "@/components/ui/button" // Ditambahkan Button
 
-// Sample analytics data
-const productAnalyticsData = [
-  {
-    id: 1,
-    name: "Monstera Deliciosa",
-    views: 850,
-    sales: 42,
-    revenue: 10500000,
-  },
-  {
-    id: 2,
-    name: "Fiddle Leaf Fig",
-    views: 720,
-    sales: 35,
-    revenue: 12250000,
-  },
-  {
-    id: 3,
-    name: "Snake Plant",
-    views: 600,
-    sales: 30,
-    revenue: 4500000,
-  },
-  {
-    id: 4,
-    name: "Peace Lily",
-    views: 550,
-    sales: 28,
-    revenue: 5040000,
-  },
-  {
-    id: 5,
-    name: "ZZ Plant",
-    views: 500,
-    sales: 25,
-    revenue: 5000000,
-  },
-  {
-    id: 6,
-    name: "Pothos",
-    views: 450,
-    sales: 22,
-    revenue: 2640000,
-  },
-]
+// Tipe untuk konfigurasi sorting
+type SortConfig<T> = {
+  key: keyof T;
+  direction: 'ascending' | 'descending';
+} | null;
 
-const categoryAnalyticsData = [
-  {
-    id: 1,
-    category: "Tanaman Hias",
-    productCount: 24,
-    sales: 120,
-    revenue: 25000000,
-  },
-  {
-    id: 2,
-    category: "Tanaman Indoor",
-    productCount: 18,
-    sales: 90,
-    revenue: 18000000,
-  },
-  {
-    id: 3,
-    category: "Tanaman Outdoor",
-    productCount: 15,
-    sales: 75,
-    revenue: 15000000,
-  },
-]
 
 export default function AnalyticsPage() {
+  const router = useRouter(); // Ditambahkan useRouter
   const [isLoading, setIsLoading] = useState(true)
-  const [productAnalytics, setProductAnalytics] = useState(productAnalyticsData)
-  const [categoryAnalytics, setCategoryAnalytics] = useState(categoryAnalyticsData)
+  const [productAnalytics, setProductAnalytics] = useState<ProductAnalyticsData[]>([])
+  const [categoryAnalytics, setCategoryAnalytics] = useState<CategoryAnalyticsData[]>([])
+  const [overallAnalytics, setOverallAnalytics] = useState({ totalSales: 0, totalRevenue: 0 })
+
+  const [productSortConfig, setProductSortConfig] = useState<SortConfig<ProductAnalyticsData>>({ key: 'sales', direction: 'descending' });
+  const [categorySortConfig, setCategorySortConfig] = useState<SortConfig<CategoryAnalyticsData>>({ key: 'category', direction: 'ascending' });
+
 
   useEffect(() => {
-    // Simulate loading data
-    const timer = setTimeout(() => {
-      setIsLoading(false)
-    }, 1000)
+    const fetchData = async () => {
+      setIsLoading(true)
+      try {
+        const analytics = await getRealAnalytics()
+        setProductAnalytics(analytics.products)
+        setCategoryAnalytics(analytics.categories)
+        setOverallAnalytics(analytics.overall)
+      } catch (error) {
+        console.error("Failed to fetch analytics data:", error)
+        setProductAnalytics([])
+        setCategoryAnalytics([])
+        setOverallAnalytics({ totalSales: 0, totalRevenue: 0 })
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-    return () => clearTimeout(timer)
+    fetchData()
   }, [])
+
+  const sortedProductAnalytics = useMemo(() => {
+    let sortableItems = [...productAnalytics];
+    if (productSortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        // @ts-ignore
+        const valA = a[productSortConfig.key];
+        // @ts-ignore
+        const valB = b[productSortConfig.key];
+
+        let comparison = 0;
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          comparison = valA.localeCompare(valB);
+        } else if (typeof valA === 'number' && typeof valB === 'number') {
+          comparison = valA - valB;
+        }
+        
+        return productSortConfig.direction === 'ascending' ? comparison : -comparison;
+      });
+    }
+    return sortableItems;
+  }, [productAnalytics, productSortConfig]);
+
+  const requestProductSort = (key: keyof ProductAnalyticsData) => {
+    let currentDirection = productSortConfig?.direction;
+    let nextDirection: 'ascending' | 'descending';
+
+    if (productSortConfig && productSortConfig.key === key) {
+      nextDirection = currentDirection === 'ascending' ? 'descending' : 'ascending';
+    } else {
+      nextDirection = key === 'name' ? 'ascending' : 'descending';
+    }
+    setProductSortConfig({ key, direction: nextDirection });
+  };
+
+  const sortedCategoryAnalytics = useMemo(() => {
+    let sortableItems = [...categoryAnalytics];
+    if (categorySortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        // @ts-ignore
+        const valA = a[categorySortConfig.key];
+        // @ts-ignore
+        const valB = b[categorySortConfig.key];
+        
+        let comparison = 0;
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          comparison = valA.localeCompare(valB);
+        } else if (typeof valA === 'number' && typeof valB === 'number') {
+          comparison = valA - valB;
+        }
+
+        return categorySortConfig.direction === 'ascending' ? comparison : -comparison;
+      });
+    }
+    return sortableItems;
+  }, [categoryAnalytics, categorySortConfig]);
+
+  const requestCategorySort = (key: keyof CategoryAnalyticsData) => {
+    let currentDirection = categorySortConfig?.direction;
+    let nextDirection: 'ascending' | 'descending';
+
+    if (categorySortConfig && categorySortConfig.key === key) {
+      nextDirection = currentDirection === 'ascending' ? 'descending' : 'ascending';
+    } else {
+      nextDirection = key === 'category' ? 'ascending' : 'descending';
+    }
+    setCategorySortConfig({ key, direction: nextDirection });
+  };
+
+  const getSortIndicatorIcon = <T,>(key: keyof T, sortConfig: SortConfig<T>) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-1 h-4 w-4 opacity-30 flex-shrink-0" />;
+    }
+    if (sortConfig.direction === 'ascending') {
+      return <ArrowUp className="ml-1 h-4 w-4 flex-shrink-0" />;
+    }
+    return <ArrowDown className="ml-1 h-4 w-4 flex-shrink-0" />;
+  };
+  
+  const topSalesProductsData = useMemo(() => {
+    const sortedBySales = [...productAnalytics].sort((a, b) => b.sales - a.sales);
+    return {
+      labels: sortedBySales.slice(0, 5).map(p => p.name.length > 12 ? p.name.substring(0, 10) + "..." : p.name),
+      values: sortedBySales.slice(0, 5).map(p => p.sales),
+    };
+  }, [productAnalytics]);
+
+  const topRevenueProductsData = useMemo(() => {
+    const sortedByRevenue = [...productAnalytics].sort((a, b) => b.revenue - a.revenue);
+    return {
+      labels: sortedByRevenue.slice(0, 5).map(p => p.name.length > 12 ? p.name.substring(0, 10) + "..." : p.name),
+      values: sortedByRevenue.slice(0, 5).map(p => p.revenue),
+    };
+  }, [productAnalytics]);
+
+  const salesByCategoryData = useMemo(() => {
+    const sortedBySales = [...categoryAnalytics].sort((a,b) => b.sales - a.sales);
+    return {
+        labels: sortedBySales.map(c => c.category),
+        values: sortedBySales.map(c => c.sales),
+    }
+  }, [categoryAnalytics]);
+
+  const revenueByCategoryData = useMemo(() => {
+    const sortedByRevenue = [...categoryAnalytics].sort((a,b) => b.revenue - a.revenue);
+    return {
+        labels: sortedByRevenue.map(c => c.category),
+        values: sortedByRevenue.map(c => c.revenue),
+    }
+  }, [categoryAnalytics]);
+
 
   if (isLoading) {
     return (
@@ -106,27 +176,23 @@ export default function AnalyticsPage() {
   return (
     <ProtectedRoute adminOnly>
       <div className="container mx-auto py-10">
-        <h1 className="text-2xl font-bold mb-6">Analitik Produk</h1>
+        <div className="flex items-center mb-6"> {/* Wrapper untuk tombol back dan judul */}
+          <Button variant="ghost" onClick={() => router.push('/admin')} className="mr-4"> {/* Tombol Back */}
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Kembali ke Dashboard
+          </Button>
+          <h1 className="text-2xl font-bold">Analitik Produk</h1>
+        </div>
 
-        <div className="grid gap-6 md:grid-cols-3 mb-8">
-          <Card className="dark:border-gray-800">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Dilihat</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {productAnalytics.reduce((sum, product) => sum + product.views, 0).toLocaleString()}
-              </div>
-            </CardContent>
-          </Card>
 
+        <div className="grid gap-6 md:grid-cols-2 mb-8">
           <Card className="dark:border-gray-800">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Penjualan</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {productAnalytics.reduce((sum, product) => sum + product.sales, 0).toLocaleString()}
+                {overallAnalytics.totalSales.toLocaleString()}
               </div>
             </CardContent>
           </Card>
@@ -137,7 +203,7 @@ export default function AnalyticsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                Rp {productAnalytics.reduce((sum, product) => sum + product.revenue, 0).toLocaleString("id-ID")}
+                Rp {overallAnalytics.totalRevenue.toLocaleString("id-ID")}
               </div>
             </CardContent>
           </Card>
@@ -153,7 +219,7 @@ export default function AnalyticsPage() {
               <CardHeader>
                 <CardTitle>Performa Produk</CardTitle>
                 <CardDescription>
-                  Analisis performa produk berdasarkan jumlah dilihat, penjualan, dan pendapatan.
+                  Analisis performa produk berdasarkan penjualan dan pendapatan.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -161,25 +227,29 @@ export default function AnalyticsPage() {
                   <TableCaption>Analisis performa produk.</TableCaption>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[200px]">Nama</TableHead>
-                      <TableHead>Dilihat</TableHead>
-                      <TableHead>Penjualan</TableHead>
-                      <TableHead>Pendapatan</TableHead>
-                      <TableHead className="text-right">Konversi</TableHead>
+                      <TableHead className="w-[300px] cursor-pointer hover:bg-muted/50" onClick={() => requestProductSort('name')}>
+                        <div className="flex items-center">Nama {getSortIndicatorIcon('name', productSortConfig)}</div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestProductSort('sales')}>
+                         <div className="flex items-center">Penjualan {getSortIndicatorIcon('sales', productSortConfig)}</div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestProductSort('revenue')}>
+                        <div className="flex items-center">Pendapatan {getSortIndicatorIcon('revenue', productSortConfig)}</div>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {productAnalytics.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell>{product.views.toLocaleString()}</TableCell>
-                        <TableCell>{product.sales.toLocaleString()}</TableCell>
-                        <TableCell>Rp {product.revenue.toLocaleString("id-ID")}</TableCell>
-                        <TableCell className="text-right">
-                          {((product.sales / product.views) * 100).toFixed(1)}%
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {sortedProductAnalytics.length === 0 ? (
+                        <TableRow><TableCell colSpan={3} className="text-center">Tidak ada data produk untuk ditampilkan.</TableCell></TableRow>
+                    ) : (
+                        sortedProductAnalytics.map((product) => (
+                          <TableRow key={product.id}>
+                            <TableCell className="font-medium">{product.name}</TableCell>
+                            <TableCell>{product.sales.toLocaleString()}</TableCell>
+                            <TableCell>Rp {product.revenue.toLocaleString("id-ID")}</TableCell>
+                          </TableRow>
+                        ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -187,26 +257,16 @@ export default function AnalyticsPage() {
 
             <div className="grid gap-6 md:grid-cols-2">
               <AnalyticsChart
-                title="Produk Terlaris"
+                title="Produk Terlaris (Top 5)"
                 description="Produk dengan penjualan tertinggi"
                 type="bar"
-                data={{
-                  labels: productAnalytics
-                    .slice(0, 5)
-                    .map((p) => (p.name.length > 15 ? p.name.substring(0, 15) + "..." : p.name)),
-                  values: productAnalytics.slice(0, 5).map((p) => p.sales),
-                }}
+                data={topSalesProductsData}
               />
               <AnalyticsChart
-                title="Pendapatan per Produk"
+                title="Pendapatan per Produk (Top 5)"
                 description="Produk dengan pendapatan tertinggi"
                 type="pie"
-                data={{
-                  labels: productAnalytics
-                    .slice(0, 5)
-                    .map((p) => (p.name.length > 15 ? p.name.substring(0, 15) + "..." : p.name)),
-                  values: productAnalytics.slice(0, 5).map((p) => p.revenue),
-                }}
+                data={topRevenueProductsData}
               />
             </div>
           </TabsContent>
@@ -224,25 +284,39 @@ export default function AnalyticsPage() {
                   <TableCaption>Analisis performa kategori.</TableCaption>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[200px]">Kategori</TableHead>
-                      <TableHead>Jumlah Produk</TableHead>
-                      <TableHead>Penjualan</TableHead>
-                      <TableHead>Pendapatan</TableHead>
-                      <TableHead className="text-right">Rata-rata per Produk</TableHead>
+                      <TableHead className="w-[200px] cursor-pointer hover:bg-muted/50" onClick={() => requestCategorySort('category')}>
+                         <div className="flex items-center">Kategori {getSortIndicatorIcon('category', categorySortConfig)}</div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestCategorySort('productCount')}>
+                         <div className="flex items-center">Jumlah Produk {getSortIndicatorIcon('productCount', categorySortConfig)}</div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestCategorySort('sales')}>
+                         <div className="flex items-center">Penjualan {getSortIndicatorIcon('sales', categorySortConfig)}</div>
+                      </TableHead>
+                      <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => requestCategorySort('revenue')}>
+                         <div className="flex items-center">Pendapatan {getSortIndicatorIcon('revenue', categorySortConfig)}</div>
+                      </TableHead>
+                      <TableHead className="text-right cursor-pointer hover:bg-muted/50" onClick={() => requestCategorySort('avgRevenuePerProduct')}>
+                         <div className="flex items-center justify-end">Rata-rata Pendapatan per Produk {getSortIndicatorIcon('avgRevenuePerProduct', categorySortConfig)}</div>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {categoryAnalytics.map((category) => (
-                      <TableRow key={category.id}>
-                        <TableCell className="font-medium">{category.category}</TableCell>
-                        <TableCell>{category.productCount}</TableCell>
-                        <TableCell>{category.sales}</TableCell>
-                        <TableCell>Rp {category.revenue.toLocaleString("id-ID")}</TableCell>
-                        <TableCell className="text-right">
-                          Rp {Math.round(category.revenue / category.productCount).toLocaleString("id-ID")}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                     {sortedCategoryAnalytics.length === 0 ? (
+                        <TableRow><TableCell colSpan={5} className="text-center">Tidak ada data kategori untuk ditampilkan.</TableCell></TableRow>
+                    ) : (
+                        sortedCategoryAnalytics.map((category) => (
+                          <TableRow key={category.id}>
+                            <TableCell className="font-medium">{category.category}</TableCell>
+                            <TableCell>{category.productCount}</TableCell>
+                            <TableCell>{category.sales.toLocaleString()}</TableCell>
+                            <TableCell>Rp {category.revenue.toLocaleString("id-ID")}</TableCell>
+                            <TableCell className="text-right">
+                              Rp {category.avgRevenuePerProduct !== undefined ? category.avgRevenuePerProduct.toLocaleString("id-ID") : 'N/A'}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -253,19 +327,13 @@ export default function AnalyticsPage() {
                 title="Penjualan per Kategori"
                 description="Kategori dengan penjualan tertinggi"
                 type="bar"
-                data={{
-                  labels: categoryAnalytics.map((c) => c.category),
-                  values: categoryAnalytics.map((c) => c.sales),
-                }}
+                data={salesByCategoryData}
               />
               <AnalyticsChart
                 title="Pendapatan per Kategori"
                 description="Kategori dengan pendapatan tertinggi"
                 type="pie"
-                data={{
-                  labels: categoryAnalytics.map((c) => c.category),
-                  values: categoryAnalytics.map((c) => c.revenue),
-                }}
+                data={revenueByCategoryData}
               />
             </div>
           </TabsContent>
