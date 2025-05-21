@@ -1,16 +1,13 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from "react"
-import Link from "next/link" 
-import { useRouter } from "next/navigation" 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import AnalyticsChart from "@/components/analytics-chart"
-import { Loader2, ArrowUp, ArrowDown, ArrowUpDown, ArrowLeft } from "lucide-react" 
+import { Loader2, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react"
 import ProtectedRoute from "@/components/protected-route"
 import { getRealAnalytics, type ProductAnalyticsData, type CategoryAnalyticsData } from "@/lib/analytics"
-import { Button } from "@/components/ui/button" 
 
 // Tipe untuk konfigurasi sorting
 type SortConfig<T> = {
@@ -20,21 +17,22 @@ type SortConfig<T> = {
 
 
 export default function AnalyticsPage() {
-  const router = useRouter(); 
   const [isLoading, setIsLoading] = useState(true)
   const [productAnalytics, setProductAnalytics] = useState<ProductAnalyticsData[]>([])
   const [categoryAnalytics, setCategoryAnalytics] = useState<CategoryAnalyticsData[]>([])
   const [overallAnalytics, setOverallAnalytics] = useState({ totalSales: 0, totalRevenue: 0 })
 
+  // State untuk sorting, default sort produk berdasarkan penjualan terbanyak
   const [productSortConfig, setProductSortConfig] = useState<SortConfig<ProductAnalyticsData>>({ key: 'sales', direction: 'descending' });
+  // Default sort kategori berdasarkan nama kategori A-Z
   const [categorySortConfig, setCategorySortConfig] = useState<SortConfig<CategoryAnalyticsData>>({ key: 'category', direction: 'ascending' });
 
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true) // Set loading true di awal
+      setIsLoading(true)
       try {
-        const analytics = await getRealAnalytics() // Ini adalah server action
+        const analytics = await getRealAnalytics()
         setProductAnalytics(analytics.products)
         setCategoryAnalytics(analytics.categories)
         setOverallAnalytics(analytics.overall)
@@ -44,20 +42,21 @@ export default function AnalyticsPage() {
         setCategoryAnalytics([])
         setOverallAnalytics({ totalSales: 0, totalRevenue: 0 })
       } finally {
-        setIsLoading(false) // Set loading false setelah selesai
+        setIsLoading(false)
       }
     }
 
     fetchData()
-  }, []) // Dependency array kosong berarti hanya dijalankan sekali saat mount
+  }, [])
 
+  // Fungsi untuk sorting produk
   const sortedProductAnalytics = useMemo(() => {
     let sortableItems = [...productAnalytics];
     if (productSortConfig !== null) {
       sortableItems.sort((a, b) => {
-        // @ts-ignore 
+        // @ts-ignore
         const valA = a[productSortConfig.key];
-        // @ts-ignore 
+        // @ts-ignore
         const valB = b[productSortConfig.key];
 
         let comparison = 0;
@@ -73,6 +72,7 @@ export default function AnalyticsPage() {
     return sortableItems;
   }, [productAnalytics, productSortConfig]);
 
+  // Fungsi untuk meminta sorting produk
   const requestProductSort = (key: keyof ProductAnalyticsData) => {
     let currentDirection = productSortConfig?.direction;
     let nextDirection: 'ascending' | 'descending';
@@ -80,18 +80,21 @@ export default function AnalyticsPage() {
     if (productSortConfig && productSortConfig.key === key) {
       nextDirection = currentDirection === 'ascending' ? 'descending' : 'ascending';
     } else {
+      // Default direction saat mengganti kolom
+      // Untuk 'name', default ke ascending, untuk lainnya ke descending
       nextDirection = key === 'name' ? 'ascending' : 'descending';
     }
     setProductSortConfig({ key, direction: nextDirection });
   };
 
+  // Fungsi untuk sorting kategori
   const sortedCategoryAnalytics = useMemo(() => {
     let sortableItems = [...categoryAnalytics];
     if (categorySortConfig !== null) {
       sortableItems.sort((a, b) => {
-        // @ts-ignore 
+        // @ts-ignore
         const valA = a[categorySortConfig.key];
-        // @ts-ignore 
+        // @ts-ignore
         const valB = b[categorySortConfig.key];
         
         let comparison = 0;
@@ -107,6 +110,7 @@ export default function AnalyticsPage() {
     return sortableItems;
   }, [categoryAnalytics, categorySortConfig]);
 
+  // Fungsi untuk meminta sorting kategori
   const requestCategorySort = (key: keyof CategoryAnalyticsData) => {
     let currentDirection = categorySortConfig?.direction;
     let nextDirection: 'ascending' | 'descending';
@@ -114,11 +118,14 @@ export default function AnalyticsPage() {
     if (categorySortConfig && categorySortConfig.key === key) {
       nextDirection = currentDirection === 'ascending' ? 'descending' : 'ascending';
     } else {
+       // Default direction saat mengganti kolom
+      // Untuk 'category', default ke ascending, untuk lainnya ke descending
       nextDirection = key === 'category' ? 'ascending' : 'descending';
     }
     setCategorySortConfig({ key, direction: nextDirection });
   };
 
+  // Fungsi untuk mendapatkan ikon indikator sort
   const getSortIndicatorIcon = <T,>(key: keyof T, sortConfig: SortConfig<T>) => {
     if (!sortConfig || sortConfig.key !== key) {
       return <ArrowUpDown className="ml-1 h-4 w-4 opacity-30 flex-shrink-0" />;
@@ -129,6 +136,7 @@ export default function AnalyticsPage() {
     return <ArrowDown className="ml-1 h-4 w-4 flex-shrink-0" />;
   };
   
+  // Data untuk chart (menggunakan data yang sudah disortir jika relevan)
   const topSalesProductsData = useMemo(() => {
     const sortedBySales = [...productAnalytics].sort((a, b) => b.sales - a.sales);
     return {
@@ -176,14 +184,7 @@ export default function AnalyticsPage() {
   return (
     <ProtectedRoute adminOnly>
       <div className="container mx-auto py-10">
-        <div className="flex items-center mb-6"> 
-          <Button variant="ghost" onClick={() => router.push('/admin')} className="mr-4"> 
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Kembali ke Dashboard
-          </Button>
-          <h1 className="text-2xl font-bold">Analitik Produk</h1>
-        </div>
-
+        <h1 className="text-2xl font-bold mb-6">Analitik Produk</h1>
 
         <div className="grid gap-6 md:grid-cols-2 mb-8">
           <Card className="dark:border-gray-800">
