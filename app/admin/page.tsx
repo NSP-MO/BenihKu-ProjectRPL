@@ -2,25 +2,28 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Leaf, Plus, Settings, Package, LogOut, BarChart3 } from "lucide-react"
+import { Leaf, Plus, Settings, Package, LogOut, BarChart3, ShoppingBag, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ProtectedRoute from "@/components/protected-route"
 import { useAuth } from "@/contexts/auth-context"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Badge } from "@/components/ui/badge"
+import { Badge } from "@/components/ui/badge" // Ensure this is the correct path
 import { supabase } from "@/lib/supabase"
 import { Loader2 } from "lucide-react"
+import { Input } from "@/components/ui/input"
 
 interface Product {
   id: number
   name: string
   price: number
   category: string
-  is_popular: boolean
+  is_popular: boolean // This is the key field
   stock: number
   status?: string
+  is_published?: boolean // Added for mapping to status
+  // show_on_homepage?: boolean; // This field is removed as per request
 }
 
 export default function AdminDashboard() {
@@ -28,42 +31,66 @@ export default function AdminDashboard() {
   const router = useRouter()
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoading(true)
-      try {
-        const { data, error } = await supabase
-          .from("products")
-          .select("id, name, price, category, is_popular, stock")
-          .order("id", { ascending: true })
-
-        if (error) {
-          console.error("Error fetching products:", error)
-          return
-        }
-
-        // Add a status field to each product (for demonstration)
-        const productsWithStatus = data.map((product) => ({
-          ...product,
-          status: product.stock > 0 ? "published" : "draft",
-        }))
-
-        setProducts(productsWithStatus)
-      } catch (error) {
-        console.error("Error fetching products:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     fetchProducts()
   }, [])
+
+  const fetchProducts = async () => {
+    setIsLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name, price, category, is_popular, stock, is_published") // Removed show_on_homepage
+        .order("id", { ascending: true })
+
+      if (error) {
+        console.error("Error fetching products:", error)
+        return
+      }
+
+      const productsWithStatus = data.map((product) => ({
+        ...product,
+        status: product.is_published ? "published" : "draft",
+      }))
+      setProducts(productsWithStatus)
+    } catch (error) {
+      console.error("Error fetching products:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const togglePopular = async (id: number, currentStatus: boolean) => {
+    const newStatus = !currentStatus
+    try {
+      // Optimistically update UI
+      setProducts(products.map((p) => (p.id === id ? { ...p, is_popular: newStatus } : p)))
+      const { error } = await supabase.from("products").update({ is_popular: newStatus }).eq("id", id)
+      if (error) {
+        // Revert UI on error
+        setProducts(products.map((p) => (p.id === id ? { ...p, is_popular: currentStatus } : p)))
+        throw error
+      }
+    } catch (err) {
+      console.error("Error toggling popular status:", err)
+      // Potentially show a toast message to the user
+    }
+  }
+
+  // Removed toggleShowcaseOnHomepage function as we are reverting to is_popular
 
   const handleLogout = () => {
     logout()
     router.push("/")
   }
+
+  const filteredProducts = products.filter(
+    (product) =>
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.category.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
 
   return (
     <ProtectedRoute adminOnly>
@@ -79,11 +106,18 @@ export default function AdminDashboard() {
           <div className="flex-1 overflow-auto py-2">
             <nav className="grid items-start px-4 text-sm font-medium">
               <Link
-                href="/admin"
+                href="/admin/dashboard"
                 className="flex items-center gap-3 rounded-lg bg-accent px-3 py-2 text-accent-foreground transition-all"
               >
                 <Package className="h-4 w-4" />
                 Produk
+              </Link>
+              <Link
+                href="/admin/orders"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                Pesanan
               </Link>
               <Link
                 href="/admin/analytics"
@@ -126,7 +160,6 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Main content */}
         <div className="flex-1">
           <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b dark:border-gray-800 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
             <div className="md:hidden flex items-center gap-2 font-semibold">
@@ -143,13 +176,24 @@ export default function AdminDashboard() {
           </header>
           <main className="grid flex-1 items-start gap-4 p-4 md:gap-8 md:p-8">
             <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold">Dashboard Admin</h1>
+              <h1 className="text-2xl font-bold">Manajemen Produk</h1>
               <Link href="/admin/products/add">
                 <Button className="bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800">
                   <Plus className="mr-2 h-4 w-4" />
                   Tambah Produk
                 </Button>
               </Link>
+            </div>
+            <div className="mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+                <Input
+                  placeholder="Cari produk..."
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
             </div>
 
             <Tabs defaultValue="all" className="w-full">
@@ -159,13 +203,21 @@ export default function AdminDashboard() {
                 <TabsTrigger value="draft">Draft</TabsTrigger>
               </TabsList>
               <TabsContent value="all" className="mt-4">
-                <ProductsTable products={products} isLoading={isLoading} />
+                <ProductsTable products={filteredProducts} isLoading={isLoading} togglePopular={togglePopular} />
               </TabsContent>
               <TabsContent value="published" className="mt-4">
-                <ProductsTable products={products.filter((p) => p.status === "published")} isLoading={isLoading} />
+                <ProductsTable
+                  products={filteredProducts.filter((p) => p.status === "published")}
+                  isLoading={isLoading}
+                  togglePopular={togglePopular}
+                />
               </TabsContent>
               <TabsContent value="draft" className="mt-4">
-                <ProductsTable products={products.filter((p) => p.status === "draft")} isLoading={isLoading} />
+                <ProductsTable
+                  products={filteredProducts.filter((p) => p.status === "draft")}
+                  isLoading={isLoading}
+                  togglePopular={togglePopular}
+                />
               </TabsContent>
             </Tabs>
           </main>
@@ -178,9 +230,12 @@ export default function AdminDashboard() {
 interface ProductsTableProps {
   products: Product[]
   isLoading: boolean
+  togglePopular: (id: number, currentStatus: boolean) => void
+  // Removed toggleShowcaseOnHomepage from props
 }
 
-function ProductsTable({ products, isLoading }: ProductsTableProps) {
+function ProductsTable({ products, isLoading, togglePopular }: ProductsTableProps) {
+  const router = useRouter()
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -209,7 +264,7 @@ function ProductsTable({ products, isLoading }: ProductsTableProps) {
               <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Harga</th>
               <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Stok</th>
               <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
-              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Populer</th>
+              <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Populer (Homepage)</th>
               <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Aksi</th>
             </tr>
           </thead>
@@ -238,7 +293,8 @@ function ProductsTable({ products, isLoading }: ProductsTableProps) {
                 <td className="p-4 align-middle">
                   <Badge
                     variant={product.is_popular ? "default" : "outline"}
-                    className={product.is_popular ? "bg-green-600" : ""}
+                    className={`${product.is_popular ? "bg-green-600 text-primary-foreground hover:bg-green-700" : ""} cursor-pointer`}
+                    onClick={() => togglePopular(product.id, product.is_popular)}
                   >
                     {product.is_popular ? "Ya" : "Tidak"}
                   </Badge>
@@ -250,13 +306,6 @@ function ProductsTable({ products, isLoading }: ProductsTableProps) {
                         Edit
                       </Button>
                     </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-red-900 dark:hover:bg-red-950 dark:text-red-400"
-                    >
-                      Hapus
-                    </Button>
                   </div>
                 </td>
               </tr>

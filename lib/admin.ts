@@ -1,19 +1,20 @@
 "use server"
 
 import { createServerSupabaseClient } from "@/lib/supabase"
-import type { Product } from "@/lib/products"
+import type { Product } from "@/lib/products" 
 
 export async function getAdminProducts() {
   const supabase = createServerSupabaseClient()
-
   try {
-    const { data, error } = await supabase.from("products").select("*").order("id")
+    const { data, error } = await supabase
+      .from("products")
+      .select("*") // is_popular will be selected
+      .order("id")
 
     if (error) {
       console.error("Error fetching products:", error)
       return []
     }
-
     return data as Product[]
   } catch (error) {
     console.error("Error fetching products:", error)
@@ -21,20 +22,17 @@ export async function getAdminProducts() {
   }
 }
 
-// Update the updateProduct function to include image fields and handle undefined values
 export async function updateProduct(id: number, productData: Partial<Product>) {
   try {
     const supabase = createServerSupabaseClient()
-
-    // Ensure numeric fields are properly typed
     const updateData: any = {
-      name: productData.name || "",
-      description: productData.description || "",
-      category: productData.category || "",
       updated_at: new Date().toISOString(),
     }
 
-    // Only include numeric fields if they are valid numbers
+    if (productData.name !== undefined) updateData.name = productData.name;
+    if (productData.description !== undefined) updateData.description = productData.description;
+    if (productData.category !== undefined) updateData.category = productData.category;
+
     if (typeof productData.price === "number") {
       updateData.price = productData.price
     } else if (typeof productData.price === "string" && !isNaN(Number.parseFloat(productData.price))) {
@@ -47,22 +45,23 @@ export async function updateProduct(id: number, productData: Partial<Product>) {
       updateData.stock = Number.parseInt(productData.stock)
     }
 
-    // Include boolean fields
     if (typeof productData.is_popular === "boolean") {
       updateData.is_popular = productData.is_popular
     }
+    
+    // If you had show_on_homepage, and want to remove it from updates:
+    // delete productData.show_on_homepage; // Or ensure it's not in updateData
 
-    // Include care instructions if provided
+     if (typeof productData.is_published === "boolean") { 
+      updateData.is_published = productData.is_published
+    }
+
     if (productData.care_instructions) {
       updateData.care_instructions = productData.care_instructions
     }
-
-    // Only include image fields if they are provided
     if (productData.image) updateData.image = productData.image
     if (productData.image_path) updateData.image_path = productData.image_path
     if (productData.image_bucket) updateData.image_bucket = productData.image_bucket
-
-    console.log("Updating product with data:", updateData)
 
     const { error } = await supabase.from("products").update(updateData).eq("id", id)
 
@@ -70,7 +69,6 @@ export async function updateProduct(id: number, productData: Partial<Product>) {
       console.error("Error updating product:", error)
       return { success: false, error: error.message }
     }
-
     return { success: true }
   } catch (error: any) {
     console.error("Error in updateProduct:", error)
@@ -78,7 +76,6 @@ export async function updateProduct(id: number, productData: Partial<Product>) {
   }
 }
 
-// Update the createProduct function to handle undefined values
 export async function createProduct({
   name,
   price,
@@ -87,6 +84,9 @@ export async function createProduct({
   stock,
   image_url,
   image_path,
+  is_popular = false, 
+  is_published = true,
+  care_instructions,
 }: {
   name: string
   price: number | string
@@ -95,11 +95,12 @@ export async function createProduct({
   stock: number | string
   image_url?: string
   image_path?: string
+  is_popular?: boolean; 
+  is_published?: boolean;
+  care_instructions?: Product['care_instructions']; 
 }) {
   try {
     const supabase = createServerSupabaseClient()
-
-    // Ensure numeric fields are properly typed
     const productPrice = typeof price === "string" ? Number.parseFloat(price) || 0 : price || 0
     const productStock = typeof stock === "string" ? Number.parseInt(stock) || 0 : stock || 0
 
@@ -112,9 +113,11 @@ export async function createProduct({
           description: description || "",
           category: category || "",
           stock: productStock,
-          image: image_url || "",
+          image: image_url || "/placeholder.svg",
           image_path: image_path || "",
-          is_popular: false,
+          is_popular: is_popular,
+          is_published: is_published,
+          care_instructions: care_instructions || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -125,7 +128,6 @@ export async function createProduct({
       console.error("Error adding product:", error)
       return { success: false, error: error.message }
     }
-
     return { success: true, data }
   } catch (error: any) {
     console.error("Error in addProduct:", error)
@@ -135,15 +137,12 @@ export async function createProduct({
 
 export async function deleteProduct(id: number) {
   const supabase = createServerSupabaseClient()
-
   try {
     const { error } = await supabase.from("products").delete().eq("id", id)
-
     if (error) {
       console.error("Error deleting product:", error)
       return { success: false, error: error.message }
     }
-
     return { success: true }
   } catch (error: any) {
     console.error("Error deleting product:", error)
