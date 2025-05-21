@@ -1,16 +1,16 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from "react"
-import Link from "next/link" // Ditambahkan Link
-import { useRouter } from "next/navigation" // Ditambahkan useRouter
+import Link from "next/link" 
+import { useRouter } from "next/navigation" 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import AnalyticsChart from "@/components/analytics-chart"
-import { Loader2, ArrowUp, ArrowDown, ArrowUpDown, ArrowLeft } from "lucide-react" // Ditambahkan ArrowLeft
+import { Loader2, ArrowUp, ArrowDown, ArrowUpDown, ArrowLeft } from "lucide-react" 
 import ProtectedRoute from "@/components/protected-route"
 import { getRealAnalytics, type ProductAnalyticsData, type CategoryAnalyticsData } from "@/lib/analytics"
-import { Button } from "@/components/ui/button" // Ditambahkan Button
+import { Button } from "@/components/ui/button" 
 
 // Tipe untuk konfigurasi sorting
 type SortConfig<T> = {
@@ -20,7 +20,7 @@ type SortConfig<T> = {
 
 
 export default function AnalyticsPage() {
-  const router = useRouter(); // Ditambahkan useRouter
+  const router = useRouter(); 
   const [isLoading, setIsLoading] = useState(true)
   const [productAnalytics, setProductAnalytics] = useState<ProductAnalyticsData[]>([])
   const [categoryAnalytics, setCategoryAnalytics] = useState<CategoryAnalyticsData[]>([])
@@ -32,9 +32,9 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      setIsLoading(true)
+      setIsLoading(true) // Set loading true di awal
       try {
-        const analytics = await getRealAnalytics()
+        const analytics = await getRealAnalytics() // Ini adalah server action
         setProductAnalytics(analytics.products)
         setCategoryAnalytics(analytics.categories)
         setOverallAnalytics(analytics.overall)
@@ -44,20 +44,20 @@ export default function AnalyticsPage() {
         setCategoryAnalytics([])
         setOverallAnalytics({ totalSales: 0, totalRevenue: 0 })
       } finally {
-        setIsLoading(false)
+        setIsLoading(false) // Set loading false setelah selesai
       }
     }
 
     fetchData()
-  }, [])
+  }, []) // Dependency array kosong berarti hanya dijalankan sekali saat mount
 
   const sortedProductAnalytics = useMemo(() => {
     let sortableItems = [...productAnalytics];
     if (productSortConfig !== null) {
       sortableItems.sort((a, b) => {
-        // @ts-ignore
+        // @ts-ignore 
         const valA = a[productSortConfig.key];
-        // @ts-ignore
+        // @ts-ignore 
         const valB = b[productSortConfig.key];
 
         let comparison = 0;
@@ -89,9 +89,9 @@ export default function AnalyticsPage() {
     let sortableItems = [...categoryAnalytics];
     if (categorySortConfig !== null) {
       sortableItems.sort((a, b) => {
-        // @ts-ignore
+        // @ts-ignore 
         const valA = a[categorySortConfig.key];
-        // @ts-ignore
+        // @ts-ignore 
         const valB = b[categorySortConfig.key];
         
         let comparison = 0;
@@ -176,8 +176,8 @@ export default function AnalyticsPage() {
   return (
     <ProtectedRoute adminOnly>
       <div className="container mx-auto py-10">
-        <div className="flex items-center mb-6"> {/* Wrapper untuk tombol back dan judul */}
-          <Button variant="ghost" onClick={() => router.push('/admin')} className="mr-4"> {/* Tombol Back */}
+        <div className="flex items-center mb-6"> 
+          <Button variant="ghost" onClick={() => router.push('/admin')} className="mr-4"> 
             <ArrowLeft className="mr-2 h-4 w-4" />
             Kembali ke Dashboard
           </Button>
