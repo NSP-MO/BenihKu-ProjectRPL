@@ -1,16 +1,16 @@
 "use client"
 
-import React, { useState, useEffect, useMemo, useCallback } from "react" 
-import Link from "next/link" 
-import { useRouter } from "next/navigation" 
+import React, { useState, useEffect, useMemo, useCallback } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import AnalyticsChart from "@/components/analytics-chart"
-import { Loader2, ArrowUp, ArrowDown, ArrowUpDown, ArrowLeft, RefreshCw } from "lucide-react" 
+import { Loader2, ArrowUp, ArrowDown, ArrowUpDown, ArrowLeft, RefreshCw } from "lucide-react"
 import ProtectedRoute from "@/components/protected-route"
-import { getRealAnalytics, type ProductAnalyticsData, type CategoryAnalyticsData } from "@/lib/analytics"
-import { Button } from "@/components/ui/button" 
+import { getRealAnalytics, type ProductAnalyticsData, type CategoryAnalyticsData } from "@/lib/analytics" //
+import { Button } from "@/components/ui/button"
 
 type SortConfig<T> = {
   key: keyof T;
@@ -19,7 +19,7 @@ type SortConfig<T> = {
 
 
 export default function AnalyticsPage() {
-  const router = useRouter(); 
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [productAnalytics, setProductAnalytics] = useState<ProductAnalyticsData[]>([])
@@ -35,11 +35,11 @@ export default function AnalyticsPage() {
 
     console.log("AnalyticsPage: Calling getRealAnalytics...");
     try {
-      const analytics = await getRealAnalytics()
-      console.log("AnalyticsPage: Data received:", analytics); 
-      setProductAnalytics(analytics.products)
-      setCategoryAnalytics(analytics.categories)
-      setOverallAnalytics(analytics.overall)
+      const analytics = await getRealAnalytics() //
+      console.log("AnalyticsPage: Data received:", analytics);
+      setProductAnalytics(analytics.products) //
+      setCategoryAnalytics(analytics.categories) //
+      setOverallAnalytics(analytics.overall) //
     } catch (error) {
       console.error("AnalyticsPage: Failed to fetch analytics data:", error)
       setProductAnalytics([])
@@ -49,14 +49,19 @@ export default function AnalyticsPage() {
       if(isRefresh) setIsRefreshing(false);
       else setIsLoading(false);
     }
-  }, []); 
+  }, []);
 
   useEffect(() => {
-    fetchData(); 
-  }, [fetchData]) 
+    fetchData();
+  }, [fetchData])
+
+  // Filter products with sales > 0
+  const filteredProductAnalytics = useMemo(() => {
+    return productAnalytics.filter(p => p.sales > 0);
+  }, [productAnalytics]);
 
   const sortedProductAnalytics = useMemo(() => {
-    let sortableItems = [...productAnalytics];
+    let sortableItems = [...filteredProductAnalytics]; // Use filtered data
     if (productSortConfig !== null) {
       sortableItems.sort((a, b) => {
         const valA = a[productSortConfig.key as keyof ProductAnalyticsData];
@@ -71,7 +76,7 @@ export default function AnalyticsPage() {
       });
     }
     return sortableItems;
-  }, [productAnalytics, productSortConfig]);
+  }, [filteredProductAnalytics, productSortConfig]); // Depend on filtered data
 
   const requestProductSort = (key: keyof ProductAnalyticsData) => {
     let currentDirection = productSortConfig?.direction;
@@ -122,22 +127,24 @@ export default function AnalyticsPage() {
     }
     return <ArrowDown className="ml-1 h-4 w-4 flex-shrink-0" />;
   };
-  
+
   const topSalesProductsData = useMemo(() => {
-    const sortedBySales = [...productAnalytics].sort((a, b) => b.sales - a.sales);
+    // Use filteredProductAnalytics here
+    const sortedBySales = [...filteredProductAnalytics].sort((a, b) => b.sales - a.sales);
     return {
       labels: sortedBySales.slice(0, 5).map(p => p.name.length > 12 ? p.name.substring(0, 10) + "..." : p.name),
       values: sortedBySales.slice(0, 5).map(p => p.sales),
     };
-  }, [productAnalytics]);
+  }, [filteredProductAnalytics]); // Depend on filtered data
 
   const topRevenueProductsData = useMemo(() => {
-    const sortedByRevenue = [...productAnalytics].sort((a, b) => b.revenue - a.revenue);
+    // Use filteredProductAnalytics here
+    const sortedByRevenue = [...filteredProductAnalytics].sort((a, b) => b.revenue - a.revenue);
     return {
       labels: sortedByRevenue.slice(0, 5).map(p => p.name.length > 12 ? p.name.substring(0, 10) + "..." : p.name),
       values: sortedByRevenue.slice(0, 5).map(p => p.revenue),
     };
-  }, [productAnalytics]);
+  }, [filteredProductAnalytics]); // Depend on filtered data
 
   const salesByCategoryData = useMemo(() => {
     const sortedBySales = [...categoryAnalytics].sort((a,b) => b.sales - a.sales);
@@ -155,7 +162,7 @@ export default function AnalyticsPage() {
     }
   }, [categoryAnalytics]);
 
-  if (isLoading && !isRefreshing) { 
+  if (isLoading && !isRefreshing) {
     return (
       <div className="container mx-auto py-10 flex items-center justify-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-2">
@@ -169,14 +176,15 @@ export default function AnalyticsPage() {
   return (
     <ProtectedRoute adminOnly>
       <div className="container mx-auto py-10">
-        <div className="flex items-center justify-between mb-6"> 
-          <div className="flex items-center">
-            <Button variant="ghost" onClick={() => router.push('/admin')} className="mr-4"> 
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Kembali ke Dashboard
-            </Button>
-            <h1 className="text-2xl font-bold">Analitik Produk</h1>
-          </div>
+        <div className="mb-4">
+          <Button variant="ghost" onClick={() => router.push('/admin')} className="p-0 hover:bg-transparent">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Kembali ke Dashboard
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Analitik Produk</h1>
           <Button variant="outline" onClick={() => fetchData(true)} disabled={isRefreshing}>
             {isRefreshing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
             Refresh Data
@@ -217,7 +225,7 @@ export default function AnalyticsPage() {
               <CardHeader>
                 <CardTitle>Performa Produk</CardTitle>
                 <CardDescription>
-                  Analisis performa produk berdasarkan penjualan dan pendapatan.
+                  Analisis performa produk berdasarkan penjualan dan pendapatan. (Produk dengan 0 penjualan disembunyikan)
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -237,8 +245,8 @@ export default function AnalyticsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {sortedProductAnalytics.length === 0 ? (
-                        <TableRow><TableCell colSpan={3} className="text-center">Tidak ada data produk untuk ditampilkan.</TableCell></TableRow>
+                    {sortedProductAnalytics.length === 0 ? ( // Checks filtered data
+                        <TableRow><TableCell colSpan={3} className="text-center">Tidak ada data produk dengan penjualan untuk ditampilkan.</TableCell></TableRow>
                     ) : (
                         sortedProductAnalytics.map((product) => (
                           <TableRow key={product.id}>
