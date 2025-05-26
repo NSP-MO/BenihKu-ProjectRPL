@@ -32,7 +32,7 @@ import { useCart } from "@/contexts/cart-context"
 import { getProductById, type Product } from "@/lib/products"
 import { storeNavigationPath } from "@/lib/navigation-utils"
 import { toast } from "@/components/ui/use-toast"
-import { Alert, AlertDescription } from "@/components/ui/alert" // Added this import
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function ProductPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -261,7 +261,8 @@ export default function ProductPage({ params }: { params: { id: string } }) {
 
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">Deskripsi</h2>
-              <p className="text-gray-700 dark:text-gray-300">{product.description}</p>
+              {/* Applied text-gray-800 for light mode and dark:text-gray-200 for dark mode for better clarity */}
+              <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{product.description}</p>
             </div>
 
             <div className="mb-6">
@@ -409,8 +410,9 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               </div>
               <div className="rounded-lg border p-4">
                 <h3 className="font-semibold mb-2">Deskripsi Lengkap</h3>
-                <p className="text-gray-700">{product.description}</p>
-                <p className="mt-4 text-gray-700">
+                {/* Applied text-gray-800 for light mode and dark:text-gray-200 for dark mode */}
+                <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{product.description}</p>
+                <p className="mt-4 text-gray-800 dark:text-gray-200 leading-relaxed">
                   Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik,
                   segera pindahkan ke pot yang lebih besar setelah menerima tanaman.
                 </p>
