@@ -32,6 +32,7 @@ import { useCart } from "@/contexts/cart-context"
 import { getProductById, type Product } from "@/lib/products"
 import { storeNavigationPath } from "@/lib/navigation-utils"
 import { toast } from "@/components/ui/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert" // Added this import
 
 export default function ProductPage({ params }: { params: { id: string } }) {
   const router = useRouter()
