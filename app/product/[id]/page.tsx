@@ -261,7 +261,8 @@ export default function ProductPage({ params }: { params: { id: string } }) {
 
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">Deskripsi</h2>
-              <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{product.description}</p>
+              {/* Updated text color for description */}
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{product.description}</p>
             </div>
 
             <div className="mb-6">
@@ -367,27 +368,27 @@ export default function ProductPage({ params }: { params: { id: string } }) {
             <div className="grid gap-6 md:grid-cols-2">
               <div className="rounded-lg border p-4 dark:border-gray-700">
                 <h3 className="font-semibold mb-2">Cahaya</h3>
-                <p className="dark:text-gray-300">{careInstructions.light}</p>
+                <p className="text-gray-700 dark:text-gray-300">{careInstructions.light}</p>
               </div>
               <div className="rounded-lg border p-4 dark:border-gray-700">
                 <h3 className="font-semibold mb-2">Penyiraman</h3>
-                <p className="dark:text-gray-300">{careInstructions.water}</p>
+                <p className="text-gray-700 dark:text-gray-300">{careInstructions.water}</p>
               </div>
               <div className="rounded-lg border p-4 dark:border-gray-700">
                 <h3 className="font-semibold mb-2">Media Tanam</h3>
-                <p className="dark:text-gray-300">{careInstructions.soil}</p>
+                <p className="text-gray-700 dark:text-gray-300">{careInstructions.soil}</p>
               </div>
               <div className="rounded-lg border p-4 dark:border-gray-700">
                 <h3 className="font-semibold mb-2">Kelembaban</h3>
-                <p className="dark:text-gray-300">{careInstructions.humidity}</p>
+                <p className="text-gray-700 dark:text-gray-300">{careInstructions.humidity}</p>
               </div>
               <div className="rounded-lg border p-4 dark:border-gray-700">
                 <h3 className="font-semibold mb-2">Suhu</h3>
-                <p className="dark:text-gray-300">{careInstructions.temperature}</p>
+                <p className="text-gray-700 dark:text-gray-300">{careInstructions.temperature}</p>
               </div>
               <div className="rounded-lg border p-4 dark:border-gray-700">
                 <h3 className="font-semibold mb-2">Pemupukan</h3>
-                <p className="dark:text-gray-300">{careInstructions.fertilizer}</p>
+                <p className="text-gray-700 dark:text-gray-300">{careInstructions.fertilizer}</p>
               </div>
             </div>
           </TabsContent>
@@ -409,8 +410,9 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               </div>
               <div className="rounded-lg border p-4">
                 <h3 className="font-semibold mb-2">Deskripsi Lengkap</h3>
-                <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{product.description}</p>
-                <p className="mt-4 text-gray-800 dark:text-gray-200 leading-relaxed">
+                {/* Updated text color */}
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{product.description}</p>
+                <p className="mt-4 text-gray-700 dark:text-gray-300 leading-relaxed">
                   Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik,
                   segera pindahkan ke pot yang lebih besar setelah menerima tanaman.
                 </p>
@@ -435,12 +437,11 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               />
             </div>
             <div>
-              {/* Applied text-gray-800 for light mode and dark:text-gray-200 for dark mode */}
-              <p className="text-gray-800 dark:text-gray-200 leading-relaxed mb-2">
+              {/* Updated text color for QR code description */}
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-2">
                 Scan QR code ini untuk membagikan produk ini dengan teman atau keluarga.
               </p>
-              {/* Applied text-gray-800 for light mode and dark:text-gray-200 for dark mode */}
-              <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                 Anda juga dapat mengklik tombol bagikan di atas untuk menyalin link atau mengunduh QR code.
               </p>
             </div>
