@@ -2,7 +2,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import Image from "next/image"; // Added import
+import Image from "next/image";
 import { Leaf, Plus, Settings, Package, LogOut, BarChart3, ShoppingBag, Search, Menu, X } from "lucide-react" 
 
 import { Button } from "@/components/ui/button"
@@ -114,6 +114,7 @@ export default function AdminDashboard() {
             <nav className="grid items-start px-4 text-sm font-medium">
               {adminNavLinks.map(link => {
                 const Icon = link.icon;
+                // Check if current path is exactly the link href or if it's the base admin path for "Produk"
                 const isActive = router.pathname === link.href || (link.href === "/admin/dashboard" && router.pathname === "/admin");
                 return (
                   <Link
@@ -170,8 +171,8 @@ export default function AdminDashboard() {
         <div className="flex-1 flex flex-col">
           {/* Mobile and Desktop Header */}
           <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b dark:border-gray-800 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
+            {/* Left side of header: Mobile Menu Trigger or empty for desktop */}
             <div className="flex items-center">
-              {/* Mobile Menu Trigger */}
               <div className="md:hidden">
                 <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                   <SheetTrigger asChild>
@@ -183,7 +184,7 @@ export default function AdminDashboard() {
                   <SheetContent side="left" className="w-[260px] p-0">
                     <SheetHeader className="p-4 border-b dark:border-gray-800">
                       <SheetTitle>
-                          <Link href="/" className="flex items-center gap-2 font-semibold" onClick={() => setIsMobileMenuOpen(false)}>
+                          <Link href="/admin/dashboard" className="flex items-center gap-2 font-semibold" onClick={() => setIsMobileMenuOpen(false)}>
                               <Leaf className="h-6 w-6 text-green-600 dark:text-green-500" />
                               <span className="text-xl">BenihKu Admin</span>
                           </Link>
@@ -191,27 +192,27 @@ export default function AdminDashboard() {
                     </SheetHeader>
                     <div className="flex-1 overflow-auto py-2 p-4">
                       <nav className="grid items-start text-sm font-medium gap-1">
-                        {adminNavLinks.map(link => {
-                          const Icon = link.icon;
-                          const isActive = router.pathname === link.href || (link.href === "/admin/dashboard" && router.pathname === "/admin");
-                          return (
-                            <Link
-                              key={link.href}
-                              href={link.href}
-                              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all ${
-                                  isActive ? "bg-accent text-accent-foreground" : ""
-                              }`}
-                              onClick={() => setIsMobileMenuOpen(false)}
-                            >
-                              <Icon className="h-4 w-4" />
-                              {link.label}
-                            </Link>
-                          );
-                        })}
+                       {adminNavLinks.map(link => {
+                        const Icon = link.icon;
+                        const isActive = router.pathname === link.href || (link.href === "/admin/dashboard" && router.pathname === "/admin");
+                        return (
+                          <Link
+                            key={link.href}
+                            href={link.href}
+                            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all ${
+                                isActive ? "bg-accent text-accent-foreground" : ""
+                            }`}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                          >
+                            <Icon className="h-4 w-4" />
+                            {link.label}
+                          </Link>
+                        );
+                       })}
                       </nav>
                     </div>
                     <Separator className="my-2" />
-                    <div className="p-4 border-t dark:border-gray-800">
+                     <div className="p-4 border-t dark:border-gray-800">
                           {user && (
                               <div className="flex items-center gap-3 rounded-lg px-3 py-2 mb-2">
                                 {user.user_metadata?.avatar_url ? (
@@ -250,17 +251,11 @@ export default function AdminDashboard() {
                   </SheetContent>
                 </Sheet>
               </div>
-              
-              {/* Mobile: Page Title shown if no menu trigger or for specific pages */}
-              {/* On the main dashboard, the title is usually in the <main> section */}
-              {/* <div className="flex-1 md:hidden text-center">
-                  <Link href="/admin/dashboard" className="flex items-center gap-2 font-semibold justify-center">
-                      <Leaf className="h-5 w-5 text-green-600 dark:text-green-500" />
-                      <span className="text-lg">BenihKu Admin</span>
-                  </Link>
-              </div> */}
+              {/* Title for mobile - can be dynamic based on page if needed, but for main dashboard, title is in <main> */}
+              {/* <h1 className="text-lg font-semibold ml-2 md:hidden">Produk</h1> */}
             </div>
-
+            
+            {/* Right side of header: ThemeToggle */}
             <div className="flex items-center gap-2 md:gap-4">
               <ThemeToggle />
             </div>
@@ -321,10 +316,10 @@ export default function AdminDashboard() {
 interface ProductsTableProps {
   products: Product[]
   isLoading: boolean
-  togglePopular: (id: number, currentStatus: boolean) => void
+  togglePopular: (id: number, currentStatus: boolean) => void // Changed from toggleHomepageDisplay
 }
 
-function ProductsTable({ products, isLoading, togglePopular }: ProductsTableProps) {
+function ProductsTable({ products, isLoading, togglePopular }: ProductsTableProps) { // Renamed prop
   const router = useRouter()
   if (isLoading) {
     return (
