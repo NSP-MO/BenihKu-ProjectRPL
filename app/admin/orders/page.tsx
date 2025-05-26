@@ -1,10 +1,11 @@
+// app/admin/orders/page.tsx
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react" // Added useMemo
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import Image from "next/image";
-import { Leaf, Package, LogOut, BarChart3, Settings, ShoppingBag, ArrowLeft, Menu } from "lucide-react" // Added Menu
+import { Leaf, Package, LogOut, BarChart3, Settings, ShoppingBag, ArrowLeft, Menu, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react" // Added Menu and sorting icons
 import { format } from "date-fns"
 
 import { Button } from "@/components/ui/button"
@@ -13,9 +14,9 @@ import ProtectedRoute from "@/components/protected-route"
 import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
-import type { OrderStatus } from "@/lib/orders"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet" // Added Sheet components
-import { Separator } from "@/components/ui/separator" // Added Separator
+import type { OrderStatus } from "@/lib/orders" // Assuming OrderStatus is exported
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Separator } from "@/components/ui/separator"
 
 interface DisplayOrder {
   id: string;
@@ -27,12 +28,22 @@ interface DisplayOrder {
   status: OrderStatus;
 }
 
+// Define SortConfig type (can be reused or defined per page if specific)
+type SortConfig<T> = {
+  key: keyof T;
+  direction: 'ascending' | 'descending';
+} | null;
+
 export default function AdminOrdersPage() {
   const { user, logout } = useAuth()
   const router = useRouter()
   const [orders, setOrders] = useState<DisplayOrder[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // State for mobile menu
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // State for sorting orders
+  const [orderSortConfig, setOrderSortConfig] = useState<SortConfig<DisplayOrder>>({ key: 'created_at', direction: 'descending' });
+
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -41,7 +52,7 @@ export default function AdminOrdersPage() {
         const { data, error } = await supabase
           .from("orders")
           .select("id, user_id, created_at, total_amount, status, customer_name, customer_email")
-          .order("created_at", { ascending: false })
+          .order("created_at", { ascending: false }) // Initial fetch order, client-side sort will override
 
         if (error) {
           console.error("Error fetching orders:", error)
@@ -65,6 +76,66 @@ export default function AdminOrdersPage() {
 
     fetchOrders()
   }, [])
+
+  // Sorting logic for orders
+   const sortedOrders = useMemo(() => {
+    let sortableItems = [...orders];
+    if (orderSortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        const valA = a[orderSortConfig.key as keyof DisplayOrder];
+        const valB = b[orderSortConfig.key as keyof DisplayOrder];
+        let comparison = 0;
+
+        if (orderSortConfig.key === 'created_at') {
+          comparison = new Date(valA as string).getTime() - new Date(valB as string).getTime();
+        } else if (typeof valA === 'string' && typeof valB === 'string') {
+          comparison = (valA || "").localeCompare(valB || "");
+        } else if (typeof valA === 'number' && typeof valB === 'number') {
+          comparison = valA - valB;
+        }
+        
+        return orderSortConfig.direction === 'ascending' ? comparison : -comparison;
+      });
+    }
+    return sortableItems;
+  }, [orders, orderSortConfig]);
+
+  const requestOrderSort = (key: keyof DisplayOrder) => {
+    let currentDirection = orderSortConfig?.direction;
+    let nextDirection: 'ascending' | 'descending';
+
+    if (orderSortConfig && orderSortConfig.key === key) {
+      nextDirection = currentDirection === 'ascending' ? 'descending' : 'ascending';
+    } else {
+      // Default sort directions for different keys
+      switch (key) {
+        case 'id':
+        case 'customer_name':
+        case 'customer_email':
+        case 'status':
+          nextDirection = 'ascending';
+          break;
+        case 'created_at':
+        case 'total_amount':
+          nextDirection = 'descending';
+          break;
+        default:
+          nextDirection = 'ascending';
+      }
+    }
+    setOrderSortConfig({ key, direction: nextDirection });
+  };
+  
+  const getSortIndicatorIcon = <T,>(key: keyof T, sortConfig: SortConfig<T>) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-1 h-3 w-3 opacity-30 flex-shrink-0" />;
+    }
+    if (sortConfig.direction === 'ascending') {
+      return <ArrowUp className="ml-1 h-3 w-3 flex-shrink-0" />;
+    }
+    return <ArrowDown className="ml-1 h-3 w-3 flex-shrink-0" />;
+  };
+
 
   const handleLogout = () => {
     logout()
@@ -95,11 +166,13 @@ export default function AdminOrdersPage() {
     { href: "/admin/settings", label: "Pengaturan", icon: Settings },
   ];
 
+  const headerCellClass = "h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted/50";
+
 
   return (
     <ProtectedRoute adminOnly>
       <div className="flex min-h-screen">
-        {/* Desktop Sidebar */}
+        {/* Sidebar */}
         <div className="hidden md:flex w-64 flex-col bg-background border-r dark:border-gray-800">
           <div className="flex h-16 items-center border-b dark:border-gray-800 px-6">
             <Link href="/" className="flex items-center gap-2 font-semibold">
@@ -119,7 +192,7 @@ export default function AdminOrdersPage() {
                     className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all ${
                         isActive ? "bg-accent text-accent-foreground" : ""
                     }`}
-                    onClick={() => setIsMobileMenuOpen(false)} // Close mobile menu on nav
+                    onClick={() => setIsMobileMenuOpen(false)} 
                   >
                     <Icon className="h-4 w-4" />
                     {link.label}
@@ -165,7 +238,6 @@ export default function AdminOrdersPage() {
         <div className="flex-1 flex flex-col">
           <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b dark:border-gray-800 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
             <div className="flex items-center">
-              {/* Mobile Menu Trigger for Admin Orders List Page */}
               <div className="md:hidden">
                 <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                   <SheetTrigger asChild>
@@ -244,17 +316,14 @@ export default function AdminOrdersPage() {
                   </SheetContent>
                 </Sheet>
               </div>
-               {/* Title for the page, shown on mobile when menu is closed, or on desktop */}
               <h1 className="text-lg font-semibold md:text-xl ml-2 md:ml-0">Manajemen Pesanan</h1>
             </div>
             
             <div className="flex items-center gap-2 md:gap-4">
               <ThemeToggle />
-              {/* Mobile logout is now inside the Sheet/Mobile Menu */}
             </div>
           </header>
           <main className="grid flex-1 items-start gap-4 p-4 md:gap-8 md:p-8">
-            {/* Desktop back button to dashboard if needed, or title */}
              <div className="hidden md:flex items-center gap-4">
                  <Link href="/admin/dashboard">
                     <Button variant="outline" size="sm">
@@ -263,7 +332,6 @@ export default function AdminOrdersPage() {
                     </Button>
                  </Link>
              </div>
-
 
             {isLoading ? (
               <div className="flex justify-center items-center py-12">
@@ -279,23 +347,33 @@ export default function AdminOrdersPage() {
                   <table className="w-full caption-bottom text-sm">
                     <thead className="[&_tr]:border-b dark:border-gray-800">
                       <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted dark:border-gray-800">
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Tanggal</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Pelanggan</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Total</th>
-                        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
+                        <th className={headerCellClass} onClick={() => requestOrderSort('id')}>
+                            <div className="flex items-center">ID {getSortIndicatorIcon('id', orderSortConfig)}</div>
+                        </th>
+                        <th className={headerCellClass} onClick={() => requestOrderSort('created_at')}>
+                            <div className="flex items-center">Tanggal {getSortIndicatorIcon('created_at', orderSortConfig)}</div>
+                        </th>
+                        <th className={headerCellClass} onClick={() => requestOrderSort('customer_name')}>
+                            <div className="flex items-center">Pelanggan {getSortIndicatorIcon('customer_name', orderSortConfig)}</div>
+                        </th>
+                        <th className={headerCellClass} onClick={() => requestOrderSort('total_amount')}>
+                            <div className="flex items-center">Total {getSortIndicatorIcon('total_amount', orderSortConfig)}</div>
+                        </th>
+                        <th className={headerCellClass} onClick={() => requestOrderSort('status')}>
+                            <div className="flex items-center">Status {getSortIndicatorIcon('status', orderSortConfig)}</div>
+                        </th>
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Aksi</th>
                       </tr>
                     </thead>
                     <tbody className="[&_tr:last-child]:border-0">{
-                      orders.map((order) => (
+                      sortedOrders.map((order) => (
                         <tr key={order.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted dark:border-gray-800">
                           <td className="p-4 align-middle font-mono text-xs">{order.id.substring(0, 8)}...</td>
                           <td className="p-4 align-middle">{format(new Date(order.created_at), "dd MMM yyyy HH:mm")}</td>
                           <td className="p-4 align-middle">{order.customer_name || order.customer_email || order.user_id.substring(0,8)+"..."}</td>
                           <td className="p-4 align-middle font-medium">Rp {order.total_amount.toLocaleString("id-ID")}</td>
                           <td className="p-4 align-middle">
-                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeColor(order.status as OrderStatus)}`}>
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeColor(order.status)}`}>
                               {order.status}
                             </span>
                           </td>
