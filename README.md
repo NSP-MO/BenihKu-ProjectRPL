@@ -38,15 +38,15 @@ Project dapat diakses pada link berikut: **[https://www.projectrpl.site/](https:
 
 3. Install dependencies
 
-   '''bash
+   ```bash
    pnpm install
-   '''
+   ```
 
 4. Run the development server
 
-   '''bash
+   ```bash
    pnpm dev
-   '''
+   ```
 
 5. Open the website in your browser at [http://localhost:3000](http://localhost:3000)
 
