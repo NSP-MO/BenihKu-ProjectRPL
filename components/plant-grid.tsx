@@ -8,9 +8,10 @@ import { Loader2 } from "lucide-react"
 
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { getProducts, getPopularProducts, type Product } from "@/lib/products" // getPopularProducts no longer takes a limit
+import { Badge } from "@/components/ui/badge" // Import Badge
 
 interface PlantGridProps {
-  showPopular?: boolean; 
+  showPopular?: boolean;
 }
 
 export default function PlantGrid({ showPopular = false }: PlantGridProps) {
@@ -26,7 +27,7 @@ export default function PlantGrid({ showPopular = false }: PlantGridProps) {
         setPlants(data)
       } catch (error) {
         console.error("Error loading plants:", error)
-        setPlants([]) 
+        setPlants([])
       } finally {
         setLoading(false)
       }
@@ -67,9 +68,17 @@ export default function PlantGrid({ showPopular = false }: PlantGridProps) {
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
               {plant.is_popular && (
-                <div className="absolute top-2 right-2 bg-green-600 text-white text-xs px-2 py-1 rounded-full">
+                <div className="absolute top-2 right-2 bg-green-600 text-white text-xs px-2 py-1 rounded-full z-10">
                   Populer
                 </div>
+              )}
+              {plant.is_published === false && (
+                <Badge
+                  variant="outline"
+                  className="absolute top-2 left-2 bg-yellow-500 text-white border-yellow-600 z-10"
+                >
+                  Draft
+                </Badge>
               )}
             </div>
             <CardContent className="p-4">
