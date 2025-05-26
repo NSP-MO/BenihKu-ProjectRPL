@@ -5,7 +5,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { ArrowLeft, Heart, MessageCircle, ShoppingCart, Loader2, Info } from "lucide-react" // Added Info icon
+import { ArrowLeft, Heart, MessageCircle, ShoppingCart, Loader2 } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
 import { QRCodeSVG } from "qrcode.react"
 
@@ -32,7 +32,7 @@ import { useCart } from "@/contexts/cart-context"
 import { getProductById, type Product } from "@/lib/products"
 import { storeNavigationPath } from "@/lib/navigation-utils"
 import { toast } from "@/components/ui/use-toast"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Alert, AlertDescription } from "@/components/ui/alert" // Added this import
 
 export default function ProductPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -207,7 +207,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
     <div className="flex min-h-screen flex-col">
       <Header />
       <div className="container py-12">
-        <Button variant="ghost" className="mb-6 px-0 hover:bg-transparent" onClick={() => router.back()}>
+        <Button variant="ghost" className="mb-6" onClick={() => router.back()}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Kembali
         </Button>
@@ -219,18 +219,18 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               alt={product.name}
               width={500}
               height={500}
-              className="w-full rounded-lg object-cover aspect-square" // Added aspect-square for consistency
+              className="w-full rounded-lg object-cover"
             />
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-4 top-4 h-10 w-10 rounded-full bg-white dark:bg-gray-800 shadow-md" // Added shadow
+              className="absolute right-4 top-4 h-10 w-10 rounded-full bg-white dark:bg-gray-800"
               onClick={() => setIsFavorite(!isFavorite)}
             >
-              <Heart className={`h-5 w-5 ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-500 dark:text-gray-400"}`} />
+              <Heart className={`h-5 w-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
               <span className="sr-only">Add to favorites</span>
             </Button>
-            {product.is_popular && !isProductDraft && <Badge className="absolute left-4 top-4 bg-green-600 text-white z-10">Populer</Badge>}
+            {product.is_popular && !isProductDraft && <Badge className="absolute left-4 top-4 bg-green-600 z-10">Populer</Badge>}
             {isProductDraft && (
               <Badge
                 variant="outline"
@@ -242,11 +242,11 @@ export default function ProductPage({ params }: { params: { id: string } }) {
           </div>
 
           <div>
-            <div className="mb-4"> {/* Reduced bottom margin slightly */}
-              <h1 className="text-3xl lg:text-4xl font-bold tracking-tight">{product.name}</h1>
-              <p className="text-sm text-muted-foreground mt-1">{product.category}</p>
-              <div className="mt-3"> {/* Reduced top margin slightly */}
-                <p className="text-3xl font-bold text-green-600 dark:text-green-500">Rp {product.price.toLocaleString("id-ID")}</p>
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold">{product.name}</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{product.category}</p>
+              <div className="mt-4 flex items-center">
+                <p className="text-2xl font-bold">Rp {product.price.toLocaleString("id-ID")}</p>
               </div>
             </div>
             
@@ -258,31 +258,20 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               </Alert>
             )}
 
-            {/* Enhanced Description Section */}
+
             <div className="mb-6">
-              <div className="flex items-center mb-3">
-                <Info className="h-5 w-5 text-green-600 dark:text-green-500 mr-2" />
-                <h2 className="text-xl font-semibold">Deskripsi Produk</h2>
-              </div>
-              <div className="space-y-3 text-base text-gray-700 dark:text-gray-300 leading-relaxed">
-                {product.description.split('\n').map((paragraph, index) => (
-                  <p key={index}>{paragraph}</p>
-                ))}
-              </div>
+              <h2 className="text-lg font-semibold mb-2">Deskripsi</h2>
+              <p className="text-gray-700 dark:text-gray-300">{product.description}</p>
             </div>
 
             <div className="mb-6">
-              <div className="flex items-center gap-3 mb-4 p-3 border rounded-lg dark:border-gray-700">
-                <Avatar className="h-12 w-12">
-                  {/* Placeholder if seller image is available in future */}
-                  {/* <AvatarImage src={seller.image_url} alt={seller.name} /> */}
-                  <AvatarFallback className="bg-green-100 dark:bg-green-800 text-green-600 dark:text-green-300">
-                    {seller.name.charAt(0).toUpperCase()}
-                  </AvatarFallback>
+              <div className="flex items-center gap-2 mb-4">
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback>{seller.name.charAt(0).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-semibold text-base">{seller.name}</p>
-                  <div className="flex items-center text-sm text-muted-foreground">
+                  <p className="font-medium">{seller.name}</p>
+                  <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
                     <span className="mr-2">⭐ {seller.rating}</span>
                     <span>Respon {seller.response_time}</span>
                   </div>
@@ -290,30 +279,26 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3"> {/* Adjusted gap for better responsiveness */}
+            <div className="flex flex-wrap gap-4">
               <Button
-                size="lg" // Added size
-                className="flex-1 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-base" // Added text-base
+                className="flex-1 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
                 onClick={handleBuyNow}
                 disabled={isProductDraft}
               >
                 Beli Sekarang
               </Button>
               <Button
-                size="lg" // Added size
                 variant="outline"
-                className="flex-1 dark:border-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 text-base" // Added text-base and hover states
+                className="flex-1 dark:border-green-700 dark:text-green-400"
                 onClick={handleAddToCart}
                 disabled={isProductDraft}
               >
-                <ShoppingCart className="mr-2 h-5 w-5" /> {/* Increased icon size */}
+                <ShoppingCart className="mr-2 h-4 w-4" />
                 Tambah ke Keranjang
               </Button>
-            </div>
-            <div className="mt-3 flex flex-col sm:flex-row gap-3"> {/* Adjusted gap */}
-               <Dialog open={contactFormOpen} onOpenChange={setContactFormOpen}>
-                <Button variant="outline" className="flex-1 w-full" onClick={handleContactSeller}> {/* Full width on small screens */}
-                  <MessageCircle className="mr-2 h-5 w-5" />
+              <Dialog open={contactFormOpen} onOpenChange={setContactFormOpen}>
+                <Button variant="outline" className="flex-1" onClick={handleContactSeller}>
+                  <MessageCircle className="mr-2 h-4 w-4" />
                   Hubungi Penjual
                 </Button>
                 <DialogContent>
@@ -366,77 +351,80 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                   </form>
                 </DialogContent>
               </Dialog>
-              <div className="flex-1 w-full"> {/* Ensures ProductQRCode takes available space */}
-                <ProductQRCode productId={product.id} productName={product.name} />
-              </div>
+              <ProductQRCode productId={product.id} productName={product.name} />
             </div>
           </div>
         </div>
 
-        <Separator className="my-8 lg:my-12" /> {/* Increased margin for larger screens */}
+        <Separator className="my-8" />
 
         <Tabs defaultValue="care" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="care" className="text-base py-2.5">Cara Merawat</TabsTrigger> {/* Increased text size and padding */}
-            <TabsTrigger value="details" className="text-base py-2.5">Detail Produk</TabsTrigger> {/* Increased text size and padding */}
+            <TabsTrigger value="care">Cara Merawat</TabsTrigger>
+            <TabsTrigger value="details">Detail Produk</TabsTrigger>
           </TabsList>
           <TabsContent value="care" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"> {/* Added lg:grid-cols-3 */}
-              {(Object.keys(careInstructions) as Array<keyof typeof careInstructions>).map((key) => (
-                <div key={key} className="rounded-lg border p-4 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30">
-                  <h3 className="font-semibold mb-1 capitalize text-gray-800 dark:text-gray-200">{key.replace(/([A-Z])/g, ' $1')}</h3>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-normal">{careInstructions[key]}</p>
-                </div>
-              ))}
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="rounded-lg border p-4 dark:border-gray-700">
+                <h3 className="font-semibold mb-2">Cahaya</h3>
+                <p className="dark:text-gray-300">{careInstructions.light}</p>
+              </div>
+              <div className="rounded-lg border p-4 dark:border-gray-700">
+                <h3 className="font-semibold mb-2">Penyiraman</h3>
+                <p className="dark:text-gray-300">{careInstructions.water}</p>
+              </div>
+              <div className="rounded-lg border p-4 dark:border-gray-700">
+                <h3 className="font-semibold mb-2">Media Tanam</h3>
+                <p className="dark:text-gray-300">{careInstructions.soil}</p>
+              </div>
+              <div className="rounded-lg border p-4 dark:border-gray-700">
+                <h3 className="font-semibold mb-2">Kelembaban</h3>
+                <p className="dark:text-gray-300">{careInstructions.humidity}</p>
+              </div>
+              <div className="rounded-lg border p-4 dark:border-gray-700">
+                <h3 className="font-semibold mb-2">Suhu</h3>
+                <p className="dark:text-gray-300">{careInstructions.temperature}</p>
+              </div>
+              <div className="rounded-lg border p-4 dark:border-gray-700">
+                <h3 className="font-semibold mb-2">Pemupukan</h3>
+                <p className="dark:text-gray-300">{careInstructions.fertilizer}</p>
+              </div>
             </div>
           </TabsContent>
           <TabsContent value="details">
-            <div className="space-y-6"> {/* Increased spacing */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6 rounded-lg border p-6 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30"> {/* Increased padding and gap */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4 rounded-lg border p-4">
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Kategori</h3>
-                  <p className="text-base text-foreground">{product.category}</p>
+                  <h3 className="text-sm font-medium text-gray-500">Kategori</h3>
+                  <p>{product.category}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Penjual</h3>
-                  <p className="text-base text-foreground">{seller.name}</p>
+                  <h3 className="text-sm font-medium text-gray-500">Penjual</h3>
+                  <p>{seller.name}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground">Rating Penjual</h3>
-                  <p className="text-base text-foreground">⭐ {seller.rating}/5</p>
+                  <h3 className="text-sm font-medium text-gray-500">Rating Penjual</h3>
+                  <p>⭐ {seller.rating}/5</p>
                 </div>
-                 {product.stock !== undefined && product.stock !== null && (
-                    <div>
-                        <h3 className="text-sm font-medium text-muted-foreground">Stok Tersedia</h3>
-                        <p className={`text-base font-semibold ${product.stock > 0 ? 'text-green-600 dark:text-green-500' : 'text-red-600 dark:text-red-500'}`}>
-                            {product.stock > 0 ? `${product.stock} unit` : "Habis"}
-                        </p>
-                    </div>
-                )}
               </div>
-              <div className="rounded-lg border p-6 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30">
-                <h3 className="font-semibold mb-2 text-lg text-foreground">Deskripsi Lengkap Tambahan</h3>
-                {/* This is the secondary description. If main description is comprehensive, this might be redundant or used for other details */}
-                <div className="space-y-3 text-base text-gray-700 dark:text-gray-300 leading-relaxed">
-                   {product.description.split('\n').map((paragraph, index) => (
-                      <p key={index}>{paragraph}</p>
-                    ))}
-                    <p className="mt-4">
-                    Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik,
-                    segera pindahkan ke pot yang lebih besar setelah menerima tanaman.
-                    </p>
-                </div>
+              <div className="rounded-lg border p-4">
+                <h3 className="font-semibold mb-2">Deskripsi Lengkap</h3>
+                <p className="text-gray-700">{product.description}</p>
+                <p className="mt-4 text-gray-700">
+                  Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik,
+                  segera pindahkan ke pot yang lebih besar setelah menerima tanaman.
+                </p>
               </div>
             </div>
           </TabsContent>
         </Tabs>
 
-        <Separator className="my-8 lg:my-12" />
+        <Separator className="my-8" />
 
         <section className="mb-8">
           <h2 className="text-xl font-semibold mb-4">QR Code Produk</h2>
-          <div className="flex flex-col md:flex-row items-center gap-6 p-6 border rounded-lg dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30">
-            <div className="bg-white p-4 rounded-lg border dark:border-gray-600">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div className="bg-white p-4 rounded-lg border">
               <QRCodeSVG
                 value={typeof window !== "undefined" ? `${window.location.origin}/product/${product.id}` : `/product/${product.id}`}
                 size={150}
@@ -446,11 +434,11 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                 includeMargin={false}
               />
             </div>
-            <div className="text-center md:text-left">
-              <p className="text-gray-700 dark:text-gray-300 mb-2">
+            <div>
+              <p className="text-gray-700 mb-2">
                 Scan QR code ini untuk membagikan produk ini dengan teman atau keluarga.
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-gray-700">
                 Anda juga dapat mengklik tombol bagikan di atas untuk menyalin link atau mengunduh QR code.
               </p>
             </div>
