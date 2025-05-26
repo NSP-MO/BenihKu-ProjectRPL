@@ -261,7 +261,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
 
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">Deskripsi</h2>
-              {/* Applied text-gray-800 for light mode and dark:text-gray-200 for dark mode for better clarity */}
               <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{product.description}</p>
             </div>
 
@@ -410,7 +409,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               </div>
               <div className="rounded-lg border p-4">
                 <h3 className="font-semibold mb-2">Deskripsi Lengkap</h3>
-                {/* Applied text-gray-800 for light mode and dark:text-gray-200 for dark mode */}
                 <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{product.description}</p>
                 <p className="mt-4 text-gray-800 dark:text-gray-200 leading-relaxed">
                   Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik,
@@ -437,10 +435,12 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               />
             </div>
             <div>
-              <p className="text-gray-700 mb-2">
+              {/* Applied text-gray-800 for light mode and dark:text-gray-200 for dark mode */}
+              <p className="text-gray-800 dark:text-gray-200 leading-relaxed mb-2">
                 Scan QR code ini untuk membagikan produk ini dengan teman atau keluarga.
               </p>
-              <p className="text-gray-700">
+              {/* Applied text-gray-800 for light mode and dark:text-gray-200 for dark mode */}
+              <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
                 Anda juga dapat mengklik tombol bagikan di atas untuk menyalin link atau mengunduh QR code.
               </p>
             </div>
