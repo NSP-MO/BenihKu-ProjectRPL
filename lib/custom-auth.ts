@@ -116,4 +116,29 @@ export const getUserNameFromMetadata = (user: any): string | null => {
   return user.user_metadata?.name || user.user_metadata?.full_name || user.user_metadata?.preferred_username || null
 }
 
-// ... (sisa fungsi di custom-auth.ts)
+// Add the handleAuthStateChange function after the existing functions
+
+// Function to handle authentication state changes
+export const handleAuthStateChange = async (event: string, session: any) => {
+  try {
+    if (event === "SIGNED_IN" && session?.user) {
+      const userName = getUserNameFromMetadata(session.user) || getNameFromEmail(session.user.email || "")
+      const userData = {
+        id: session.user.id,
+        email: session.user.email || "",
+        name: userName,
+        role: session.user.user_metadata?.role || "user",
+      }
+
+      localStorage.setItem("benihku_user", JSON.stringify(userData))
+      return userData
+    } else if (event === "SIGNED_OUT") {
+      localStorage.removeItem("benihku_user")
+      return null
+    }
+    return null
+  } catch (error) {
+    console.error("Error handling auth state change:", error)
+    return null
+  }
+}
