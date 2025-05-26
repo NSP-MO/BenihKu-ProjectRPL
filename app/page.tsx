@@ -1,17 +1,17 @@
 import Link from "next/link"
 import { Leaf } from "lucide-react"
 
-import { Button } from "@/components/ui/button" //
-import PlantGrid from "@/components/plant-grid" //
-import Header from "@/components/header" //
+import { Button } from "@/components/ui/button"
+import PlantGrid from "@/components/plant-grid"
+import Header from "@/components/header"
 
 export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        {/* Perubahan pada baris di bawah ini: bg-green-50 menjadi bg-green-75 */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-green-75 dark:bg-green-950">
+        {/* Perubahan pada baris di bawah ini: menjadi bg-slate-100 */}
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-slate-100 dark:bg-green-950">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
@@ -37,6 +37,7 @@ export default function Home() {
             </div>
           </div>
         </section>
+        {/* Seksi Tanaman Populer */}
         <section className="w-full py-12 md:py-24 lg:py-32">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
@@ -50,6 +51,8 @@ export default function Home() {
             <PlantGrid showPopular={true} />
           </div>
         </section>
+        {/* Seksi Cara Menggunakan QR Scanner */}
+        {/* Latar belakang seksi ini juga bisa disesuaikan jika diinginkan, saat ini masih bg-green-50 */}
         <section className="w-full py-12 md:py-24 lg:py-32 bg-green-50 dark:bg-green-950">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
@@ -61,7 +64,7 @@ export default function Home() {
               </div>
               <div className="mx-auto grid max-w-5xl items-center gap-6 py-12 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="flex flex-col items-center space-y-4 rounded-lg border p-6 dark:border-gray-700">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-75 dark:bg-green-900">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
                     <span className="text-xl font-bold text-green-600 dark:text-green-300">1</span>
                   </div>
                   <h3 className="text-xl font-bold">Buka QR Scanner</h3>
@@ -70,7 +73,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="flex flex-col items-center space-y-4 rounded-lg border p-6 dark:border-gray-700">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-75 dark:bg-green-900">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
                     <span className="text-xl font-bold text-green-600 dark:text-green-300">2</span>
                   </div>
                   <h3 className="text-xl font-bold">Scan QR Code</h3>
@@ -79,7 +82,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="flex flex-col items-center space-y-4 rounded-lg border p-6 dark:border-gray-700 sm:col-span-2 lg:col-span-1 sm:max-w-sm sm:mx-auto">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-75 dark:bg-green-900">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
                     <span className="text-xl font-bold text-green-600 dark:text-green-300">3</span>
                   </div>
                   <h3 className="text-xl font-bold">Lihat Informasi</h3>
