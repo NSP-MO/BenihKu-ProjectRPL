@@ -1,9 +1,10 @@
+// app/admin/dashboard/page.tsx
 "use client"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react" // Added useMemo
 import Image from "next/image";
-import { Leaf, Plus, Settings, Package, LogOut, BarChart3, ShoppingBag, Search, Menu, X } from "lucide-react" 
+import { Leaf, Plus, Settings, Package, LogOut, BarChart3, ShoppingBag, Search, Menu, X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react" // Added sorting icons
 
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -14,7 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { supabase } from "@/lib/supabase"
 import { Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet" 
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator"
 
 
@@ -25,17 +26,29 @@ interface Product {
   category: string
   is_popular: boolean
   stock: number
-  status?: string
+  status?: string // 'published' or 'draft'
   is_published?: boolean
+  // Add created_at if you want to sort by date, ensure it's fetched in fetchProducts
+  created_at?: string; 
 }
 
-export default function AdminDashboard() {
+// Define SortConfig type
+type SortConfig<T> = {
+  key: keyof T;
+  direction: 'ascending' | 'descending';
+} | null;
+
+
+export default function AdminDashboardPage() {
   const { user, logout } = useAuth()
   const router = useRouter()
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // State for sorting products
+  const [productSortConfig, setProductSortConfig] = useState<SortConfig<Product>>({ key: 'name', direction: 'ascending' });
 
 
   useEffect(() => {
@@ -47,7 +60,7 @@ export default function AdminDashboard() {
     try {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, price, category, is_popular, stock, is_published")
+        .select("id, name, price, category, is_popular, stock, is_published, created_at") // Added created_at
         .order("id", { ascending: true })
 
       if (error) {
@@ -86,11 +99,77 @@ export default function AdminDashboard() {
     router.push("/")
   }
 
-  const filteredProducts = products.filter(
+  const filteredProducts = useMemo(() => products.filter(
     (product) =>
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.category.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  ), [products, searchQuery]);
+
+  // Sorting logic for products
+  const sortedProducts = useMemo(() => {
+    let sortableItems = [...filteredProducts];
+    if (productSortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        const valA = a[productSortConfig.key as keyof Product];
+        const valB = b[productSortConfig.key as keyof Product];
+        let comparison = 0;
+
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          comparison = valA.localeCompare(valB);
+        } else if (typeof valA === 'number' && typeof valB === 'number') {
+          comparison = valA - valB;
+        } else if (typeof valA === 'boolean' && typeof valB === 'boolean') {
+          comparison = valA === valB ? 0 : valA ? -1 : 1; // true comes before false
+        } else if (valA instanceof Date && valB instanceof Date) {
+            comparison = valA.getTime() - valB.getTime();
+        } else if (typeof valA === 'string' && Date.parse(valA) && typeof valB === 'string' && Date.parse(valB)) {
+            // Handle date strings
+            comparison = new Date(valA).getTime() - new Date(valB).getTime();
+        }
+
+
+        return productSortConfig.direction === 'ascending' ? comparison : -comparison;
+      });
+    }
+    return sortableItems;
+  }, [filteredProducts, productSortConfig]);
+
+  const requestProductSort = (key: keyof Product) => {
+    let currentDirection = productSortConfig?.direction;
+    let nextDirection: 'ascending' | 'descending';
+    if (productSortConfig && productSortConfig.key === key) {
+      nextDirection = currentDirection === 'ascending' ? 'descending' : 'ascending';
+    } else {
+      // Default sort directions for different keys
+      switch (key) {
+        case 'name':
+        case 'category':
+        case 'status':
+        case 'created_at':
+          nextDirection = 'ascending';
+          break;
+        case 'price':
+        case 'stock':
+        case 'id':
+          nextDirection = 'descending';
+          break;
+        default:
+          nextDirection = 'ascending';
+      }
+    }
+    setProductSortConfig({ key, direction: nextDirection });
+  };
+
+  const getSortIndicatorIcon = <T,>(key: keyof T, sortConfig: SortConfig<T>) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-1 h-3 w-3 opacity-30 flex-shrink-0" />;
+    }
+    if (sortConfig.direction === 'ascending') {
+      return <ArrowUp className="ml-1 h-3 w-3 flex-shrink-0" />;
+    }
+    return <ArrowDown className="ml-1 h-3 w-3 flex-shrink-0" />;
+  };
+
 
   const adminNavLinks = [
     { href: "/admin/dashboard", label: "Produk", icon: Package },
@@ -114,7 +193,6 @@ export default function AdminDashboard() {
             <nav className="grid items-start px-4 text-sm font-medium">
               {adminNavLinks.map(link => {
                 const Icon = link.icon;
-                // Check if current path is exactly the link href or if it's the base admin path for "Produk"
                 const isActive = router.pathname === link.href || (link.href === "/admin/dashboard" && router.pathname === "/admin");
                 return (
                   <Link
@@ -171,7 +249,6 @@ export default function AdminDashboard() {
         <div className="flex-1 flex flex-col">
           {/* Mobile and Desktop Header */}
           <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b dark:border-gray-800 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
-            {/* Left side of header: Mobile Menu Trigger or empty for desktop */}
             <div className="flex items-center">
               <div className="md:hidden">
                 <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -251,11 +328,8 @@ export default function AdminDashboard() {
                   </SheetContent>
                 </Sheet>
               </div>
-              {/* Title for mobile - can be dynamic based on page if needed, but for main dashboard, title is in <main> */}
-              {/* <h1 className="text-lg font-semibold ml-2 md:hidden">Produk</h1> */}
             </div>
             
-            {/* Right side of header: ThemeToggle */}
             <div className="flex items-center gap-2 md:gap-4">
               <ThemeToggle />
             </div>
@@ -289,20 +363,33 @@ export default function AdminDashboard() {
                 <TabsTrigger value="draft">Draft</TabsTrigger>
               </TabsList>
               <TabsContent value="all" className="mt-4">
-                <ProductsTable products={filteredProducts} isLoading={isLoading} togglePopular={togglePopular} />
+                <ProductsTable 
+                    products={sortedProducts} 
+                    isLoading={isLoading} 
+                    togglePopular={togglePopular}
+                    sortConfig={productSortConfig}
+                    requestSort={requestProductSort}
+                    getSortIndicatorIcon={getSortIndicatorIcon}
+                />
               </TabsContent>
               <TabsContent value="published" className="mt-4">
                 <ProductsTable
-                  products={filteredProducts.filter((p) => p.status === "published")}
+                  products={sortedProducts.filter((p) => p.status === "published")}
                   isLoading={isLoading}
                   togglePopular={togglePopular}
+                  sortConfig={productSortConfig}
+                  requestSort={requestProductSort}
+                  getSortIndicatorIcon={getSortIndicatorIcon}
                 />
               </TabsContent>
               <TabsContent value="draft" className="mt-4">
                 <ProductsTable
-                  products={filteredProducts.filter((p) => p.status === "draft")}
+                  products={sortedProducts.filter((p) => p.status === "draft")}
                   isLoading={isLoading}
                   togglePopular={togglePopular}
+                  sortConfig={productSortConfig}
+                  requestSort={requestProductSort}
+                  getSortIndicatorIcon={getSortIndicatorIcon}
                 />
               </TabsContent>
             </Tabs>
@@ -316,10 +403,13 @@ export default function AdminDashboard() {
 interface ProductsTableProps {
   products: Product[]
   isLoading: boolean
-  togglePopular: (id: number, currentStatus: boolean) => void // Changed from toggleHomepageDisplay
+  togglePopular: (id: number, currentStatus: boolean) => void
+  sortConfig: SortConfig<Product>;
+  requestSort: (key: keyof Product) => void;
+  getSortIndicatorIcon: <T,>(key: keyof T, sortConfig: SortConfig<T>) => JSX.Element;
 }
 
-function ProductsTable({ products, isLoading, togglePopular }: ProductsTableProps) { // Renamed prop
+function ProductsTable({ products, isLoading, togglePopular, sortConfig, requestSort, getSortIndicatorIcon }: ProductsTableProps) {
   const router = useRouter()
   if (isLoading) {
     return (
@@ -337,19 +427,40 @@ function ProductsTable({ products, isLoading, togglePopular }: ProductsTableProp
     )
   }
 
+  const headerCellClass = "h-12 px-2 sm:px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted/50";
+
   return (
     <div className="rounded-md border dark:border-gray-800">
       <div className="relative w-full overflow-auto"> 
         <table className="w-full caption-bottom text-sm">
           <thead className="[&_tr]:border-b dark:border-gray-800">
             <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted dark:border-gray-800">
-              <th className="h-12 px-2 sm:px-4 text-left align-middle font-medium text-muted-foreground w-[60px] sm:w-[80px]">ID</th>
-              <th className="h-12 px-2 sm:px-4 text-left align-middle font-medium text-muted-foreground">Nama Produk</th>
-              <th className="h-12 px-2 sm:px-4 text-left align-middle font-medium text-muted-foreground hidden sm:table-cell">Kategori</th>
-              <th className="h-12 px-2 sm:px-4 text-left align-middle font-medium text-muted-foreground">Harga</th>
-              <th className="h-12 px-2 sm:px-4 text-left align-middle font-medium text-muted-foreground hidden md:table-cell">Stok</th>
-              <th className="h-12 px-2 sm:px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
-              <th className="h-12 px-2 sm:px-4 text-left align-middle font-medium text-muted-foreground">Populer</th>
+              <th className={`${headerCellClass} w-[60px] sm:w-[80px]`} onClick={() => requestSort('id')}>
+                <div className="flex items-center">ID {getSortIndicatorIcon('id', sortConfig)}</div>
+              </th>
+              <th className={headerCellClass} onClick={() => requestSort('name')}>
+                 <div className="flex items-center">Nama Produk {getSortIndicatorIcon('name', sortConfig)}</div>
+              </th>
+              <th className={`${headerCellClass} hidden sm:table-cell`} onClick={() => requestSort('category')}>
+                <div className="flex items-center">Kategori {getSortIndicatorIcon('category', sortConfig)}</div>
+              </th>
+              <th className={headerCellClass} onClick={() => requestSort('price')}>
+                <div className="flex items-center">Harga {getSortIndicatorIcon('price', sortConfig)}</div>
+              </th>
+              <th className={`${headerCellClass} hidden md:table-cell`} onClick={() => requestSort('stock')}>
+                <div className="flex items-center">Stok {getSortIndicatorIcon('stock', sortConfig)}</div>
+              </th>
+              <th className={headerCellClass} onClick={() => requestSort('status')}>
+                <div className="flex items-center">Status {getSortIndicatorIcon('status', sortConfig)}</div>
+              </th>
+              <th className={headerCellClass} onClick={() => requestSort('is_popular')}>
+                <div className="flex items-center">Populer {getSortIndicatorIcon('is_popular', sortConfig)}</div>
+              </th>
+              {/* Add created_at header if you want to sort by it
+              <th className={headerCellClass} onClick={() => requestSort('created_at')}>
+                <div className="flex items-center">Tanggal Dibuat {getSortIndicatorIcon('created_at', sortConfig)}</div>
+              </th>
+              */}
               <th className="h-12 px-2 sm:px-4 text-left align-middle font-medium text-muted-foreground w-[80px] sm:w-[100px]">Aksi</th>
             </tr>
           </thead>
@@ -384,6 +495,11 @@ function ProductsTable({ products, isLoading, togglePopular }: ProductsTableProp
                     {product.is_popular ? "Ya" : "Tidak"}
                   </Badge>
                 </td>
+                {/* Display created_at if needed
+                <td className="p-2 sm:p-4 align-middle">
+                  {product.created_at ? new Date(product.created_at).toLocaleDateString() : '-'}
+                </td>
+                */}
                 <td className="p-2 sm:p-4 align-middle">
                   <div className="flex justify-center">
                     <Link href={`/admin/products/edit/${product.id}`}>
