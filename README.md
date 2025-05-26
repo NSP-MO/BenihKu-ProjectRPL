@@ -74,17 +74,3 @@ Project dapat diakses pada link berikut: **[https://www.projectrpl.site/](https:
 * `pnpm dev` — Run in development mode
 * `pnpm build` — Build for production
 * `pnpm start` — Start the production server
-
-
-## Build your app
-
-Continue building the app on:
-
-**[https://v0.dev/chat/fork-of-e-commerce-tanaman-website-syeAQk0zVQk](https://v0.dev/chat/fork-of-e-commerce-tanaman-website-syeAQk0zVQk)**
-
-## How It Works
-
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
