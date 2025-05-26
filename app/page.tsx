@@ -11,7 +11,8 @@ export default function Home() {
       <Header />
       <main className="flex-1">
         {/* Seksi Hero */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-slate-100 dark:bg-green-950">
+        {/* Perubahan pada baris di bawah ini: menjadi bg-emerald-50 */}
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-emerald-50 dark:bg-green-950">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
@@ -54,8 +55,8 @@ export default function Home() {
         </section>
 
         {/* Seksi Cara Menggunakan QR Scanner */}
-        {/* Perubahan pada baris di bawah ini: bg-green-50 menjadi bg-slate-100 */}
-        <section className="w-full py-12 md:py-24 lg:py-32 bg-slate-100 dark:bg-green-950">
+        {/* Perubahan pada baris di bawah ini: menjadi bg-emerald-50 */}
+        <section className="w-full py-12 md:py-24 lg:py-32 bg-emerald-50 dark:bg-green-950">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
@@ -66,9 +67,9 @@ export default function Home() {
               </div>
               <div className="mx-auto grid max-w-5xl items-center gap-6 py-12 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="flex flex-col items-center space-y-4 rounded-lg border p-6 dark:border-gray-700">
-                  {/* Konten Card 1: bg-green-100 pada lingkaran bisa dipertimbangkan untuk diubah juga jika ingin lebih netral */}
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700"> 
-                    <span className="text-xl font-bold text-slate-700 dark:text-slate-200">1</span>
+                  {/* Lingkaran nomor bisa menggunakan warna yang kontras atau senada */}
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-800"> 
+                    <span className="text-xl font-bold text-emerald-700 dark:text-emerald-200">1</span>
                   </div>
                   <h3 className="text-xl font-bold">Buka QR Scanner</h3>
                   <p className="text-center text-gray-500 dark:text-gray-400">
@@ -76,9 +77,8 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="flex flex-col items-center space-y-4 rounded-lg border p-6 dark:border-gray-700">
-                   {/* Konten Card 2: bg-green-100 pada lingkaran */}
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700">
-                    <span className="text-xl font-bold text-slate-700 dark:text-slate-200">2</span>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-800">
+                    <span className="text-xl font-bold text-emerald-700 dark:text-emerald-200">2</span>
                   </div>
                   <h3 className="text-xl font-bold">Scan QR Code</h3>
                   <p className="text-center text-gray-500 dark:text-gray-400">
@@ -86,9 +86,8 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="flex flex-col items-center space-y-4 rounded-lg border p-6 dark:border-gray-700 sm:col-span-2 lg:col-span-1 sm:max-w-sm sm:mx-auto">
-                   {/* Konten Card 3: bg-green-100 pada lingkaran */}
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700">
-                    <span className="text-xl font-bold text-slate-700 dark:text-slate-200">3</span>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-800">
+                    <span className="text-xl font-bold text-emerald-700 dark:text-emerald-200">3</span>
                   </div>
                   <h3 className="text-xl font-bold">Lihat Informasi</h3>
                   <p className="text-center text-gray-500 dark:text-gray-400">

@@ -1,3 +1,4 @@
+// app/product/[id]/page.tsx
 "use client"
 
 import type React from "react"
@@ -30,6 +31,8 @@ import { useAuth } from "@/contexts/auth-context"
 import { useCart } from "@/contexts/cart-context"
 import { getProductById, type Product } from "@/lib/products"
 import { storeNavigationPath } from "@/lib/navigation-utils"
+import { toast } from "@/components/ui/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert" // Added this import
 
 export default function ProductPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -115,6 +118,14 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   }
 
   const handleAddToCart = () => {
+    if (product.is_published === false) {
+      toast({
+        title: "Produk Draft",
+        description: "Produk ini masih dalam status draft dan tidak dapat ditambahkan ke keranjang.",
+        variant: "destructive",
+      })
+      return;
+    }
     if (!user) {
       // Redirect to login if not authenticated
       router.push(`/auth/login?returnUrl=${encodeURIComponent(window.location.pathname)}`)
@@ -130,6 +141,14 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   }
 
   const handleBuyNow = () => {
+     if (product.is_published === false) {
+      toast({
+        title: "Produk Draft",
+        description: "Produk ini masih dalam status draft dan tidak dapat dipesan.",
+        variant: "destructive",
+      })
+      return;
+    }
     if (!user) {
       // Redirect to login if not authenticated
       router.push(`/auth/login?returnUrl=${encodeURIComponent(window.location.pathname)}`)
@@ -180,6 +199,9 @@ export default function ProductPage({ params }: { params: { id: string } }) {
     rating: 4.5,
     response_time: "± 1 jam",
   }
+  
+  const isProductDraft = product.is_published === false;
+
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -202,13 +224,21 @@ export default function ProductPage({ params }: { params: { id: string } }) {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-4 top-4 h-10 w-10 rounded-full bg-white"
+              className="absolute right-4 top-4 h-10 w-10 rounded-full bg-white dark:bg-gray-800"
               onClick={() => setIsFavorite(!isFavorite)}
             >
               <Heart className={`h-5 w-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
               <span className="sr-only">Add to favorites</span>
             </Button>
-            {product.is_popular && <Badge className="absolute left-4 top-4 bg-green-600">Populer</Badge>}
+            {product.is_popular && !isProductDraft && <Badge className="absolute left-4 top-4 bg-green-600 z-10">Populer</Badge>}
+            {isProductDraft && (
+              <Badge
+                variant="outline"
+                className="absolute left-4 top-4 bg-yellow-500 text-white border-yellow-600 z-10"
+              >
+                Draft
+              </Badge>
+            )}
           </div>
 
           <div>
@@ -219,6 +249,15 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                 <p className="text-2xl font-bold">Rp {product.price.toLocaleString("id-ID")}</p>
               </div>
             </div>
+            
+            {isProductDraft && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertDescription>
+                  Produk ini adalah draft dan tidak dapat dibeli atau ditambahkan ke keranjang.
+                </AlertDescription>
+              </Alert>
+            )}
+
 
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">Deskripsi</h2>
@@ -244,6 +283,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               <Button
                 className="flex-1 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800"
                 onClick={handleBuyNow}
+                disabled={isProductDraft}
               >
                 Beli Sekarang
               </Button>
@@ -251,6 +291,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                 variant="outline"
                 className="flex-1 dark:border-green-700 dark:text-green-400"
                 onClick={handleAddToCart}
+                disabled={isProductDraft}
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 Tambah ke Keranjang
@@ -385,7 +426,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="bg-white p-4 rounded-lg border">
               <QRCodeSVG
-                value={typeof window !== "undefined" ? `${window.location.href}` : `/product/${product.id}`}
+                value={typeof window !== "undefined" ? `${window.location.origin}/product/${product.id}` : `/product/${product.id}`}
                 size={150}
                 bgColor={"#ffffff"}
                 fgColor={"#000000"}
