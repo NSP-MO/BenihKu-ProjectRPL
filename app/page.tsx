@@ -102,7 +102,8 @@ export default function Home() {
             <Leaf className="h-6 w-6 text-green-600 dark:text-green-500" />
             <span className="text-xl font-semibold">BenihKu</span>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+          {/* Added md:flex-grow to the copyright paragraph */}
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center md:flex-grow">
             © 2025 BenihKu. Semua hak dilindungi.
           </p>
           <div className="flex gap-4 sm:gap-6">
