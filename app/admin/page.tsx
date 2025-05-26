@@ -2,7 +2,8 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Leaf, Plus, Settings, Package, LogOut, BarChart3, ShoppingBag, Search, Menu, X } from "lucide-react" // Ditambahkan Menu, X
+import Image from "next/image"; // Added import
+import { Leaf, Plus, Settings, Package, LogOut, BarChart3, ShoppingBag, Search, Menu, X } from "lucide-react" 
 
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -13,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { supabase } from "@/lib/supabase"
 import { Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet" // Ditambahkan Sheet components
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet" 
 import { Separator } from "@/components/ui/separator"
 
 
@@ -113,12 +114,13 @@ export default function AdminDashboard() {
             <nav className="grid items-start px-4 text-sm font-medium">
               {adminNavLinks.map(link => {
                 const Icon = link.icon;
+                const isActive = router.pathname === link.href || (link.href === "/admin/dashboard" && router.pathname === "/admin");
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
                     className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all ${
-                        router.pathname === link.href ? "bg-accent text-accent-foreground" : ""
+                        isActive ? "bg-accent text-accent-foreground" : ""
                     }`}
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
@@ -132,14 +134,24 @@ export default function AdminDashboard() {
           <div className="border-t dark:border-gray-800 p-4">
             {user && (
                 <div className="flex items-center gap-3 rounded-lg px-3 py-2 mb-2">
+                  {user.user_metadata?.avatar_url ? (
+                    <Image
+                      src={user.user_metadata.avatar_url as string}
+                      alt={user.user_metadata.name || user.email || "User Avatar"}
+                      width={32}
+                      height={32}
+                      className="rounded-full object-cover"
+                    />
+                  ) : (
                     <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                        {user?.user_metadata?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "A"}
-                    </span>
+                      <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                          {(user.user_metadata?.name || user.email || "A").charAt(0).toUpperCase()}
+                      </span>
                     </div>
+                  )}
                     <div>
-                    <p className="text-sm font-medium">{user?.user_metadata?.name || user?.email}</p>
-                    <p className="text-xs text-muted-foreground">{user?.email}</p>
+                    <p className="text-sm font-medium truncate max-w-[150px]">{user.user_metadata?.name || user.email}</p>
+                    <p className="text-xs text-muted-foreground truncate max-w-[150px]">{user.email}</p>
                     </div>
                 </div>
             )}
@@ -157,91 +169,100 @@ export default function AdminDashboard() {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
           {/* Mobile and Desktop Header */}
-          <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b dark:border-gray-800 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
-            {/* Mobile Menu Trigger */}
-            <div className="md:hidden">
-              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Menu className="h-6 w-6" />
-                    <span className="sr-only">Buka Menu</span>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[260px] p-0">
-                  <SheetHeader className="p-4 border-b dark:border-gray-800">
-                    <SheetTitle>
-                        <Link href="/" className="flex items-center gap-2 font-semibold" onClick={() => setIsMobileMenuOpen(false)}>
-                            <Leaf className="h-6 w-6 text-green-600 dark:text-green-500" />
-                            <span className="text-xl">BenihKu Admin</span>
-                        </Link>
-                    </SheetTitle>
-                  </SheetHeader>
-                  <div className="flex-1 overflow-auto py-2 p-4">
-                    <nav className="grid items-start text-sm font-medium gap-1">
-                       {adminNavLinks.map(link => {
-                        const Icon = link.icon;
-                        return (
-                          <Link
-                            key={link.href}
-                            href={link.href}
-                            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all ${
-                                router.pathname === link.href ? "bg-accent text-accent-foreground" : ""
-                            }`}
-                            onClick={() => setIsMobileMenuOpen(false)}
-                          >
-                            <Icon className="h-4 w-4" />
-                            {link.label}
+          <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b dark:border-gray-800 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
+            <div className="flex items-center">
+              {/* Mobile Menu Trigger */}
+              <div className="md:hidden">
+                <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Menu className="h-6 w-6" />
+                      <span className="sr-only">Buka Menu</span>
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-[260px] p-0">
+                    <SheetHeader className="p-4 border-b dark:border-gray-800">
+                      <SheetTitle>
+                          <Link href="/" className="flex items-center gap-2 font-semibold" onClick={() => setIsMobileMenuOpen(false)}>
+                              <Leaf className="h-6 w-6 text-green-600 dark:text-green-500" />
+                              <span className="text-xl">BenihKu Admin</span>
                           </Link>
-                        );
-                       })}
-                    </nav>
-                  </div>
-                  <Separator className="my-2" />
-                   <div className="p-4 border-t dark:border-gray-800">
-                        {user && (
-                            <div className="flex items-center gap-3 rounded-lg px-3 py-2 mb-2">
-                                <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                                <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                                    {user?.user_metadata?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "A"}
-                                </span>
-                                </div>
-                                <div>
-                                <p className="text-sm font-medium">{user?.user_metadata?.name || user?.email}</p>
-                                <p className="text-xs text-muted-foreground">{user?.email}</p>
-                                </div>
-                            </div>
-                        )}
-                        <Button
-                        variant="ghost"
-                        className="w-full justify-start text-muted-foreground hover:text-foreground"
-                        onClick={() => {
-                            handleLogout();
-                            setIsMobileMenuOpen(false);
-                        }}
-                        >
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Keluar
-                        </Button>
+                      </SheetTitle>
+                    </SheetHeader>
+                    <div className="flex-1 overflow-auto py-2 p-4">
+                      <nav className="grid items-start text-sm font-medium gap-1">
+                        {adminNavLinks.map(link => {
+                          const Icon = link.icon;
+                          const isActive = router.pathname === link.href || (link.href === "/admin/dashboard" && router.pathname === "/admin");
+                          return (
+                            <Link
+                              key={link.href}
+                              href={link.href}
+                              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all ${
+                                  isActive ? "bg-accent text-accent-foreground" : ""
+                              }`}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                              <Icon className="h-4 w-4" />
+                              {link.label}
+                            </Link>
+                          );
+                        })}
+                      </nav>
                     </div>
-                </SheetContent>
-              </Sheet>
+                    <Separator className="my-2" />
+                    <div className="p-4 border-t dark:border-gray-800">
+                          {user && (
+                              <div className="flex items-center gap-3 rounded-lg px-3 py-2 mb-2">
+                                {user.user_metadata?.avatar_url ? (
+                                  <Image
+                                    src={user.user_metadata.avatar_url as string}
+                                    alt={user.user_metadata.name || user.email || "User Avatar"}
+                                    width={32}
+                                    height={32}
+                                    className="rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                                        {(user.user_metadata?.name || user.email || "A").charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                )}
+                                  <div>
+                                  <p className="text-sm font-medium truncate max-w-[150px]">{user.user_metadata?.name || user.email}</p>
+                                  <p className="text-xs text-muted-foreground truncate max-w-[150px]">{user.email}</p>
+                                  </div>
+                              </div>
+                          )}
+                          <Button
+                          variant="ghost"
+                          className="w-full justify-start text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                              handleLogout();
+                              setIsMobileMenuOpen(false);
+                          }}
+                          >
+                          <LogOut className="mr-2 h-4 w-4" />
+                          Keluar
+                          </Button>
+                      </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+              
+              {/* Mobile: Page Title shown if no menu trigger or for specific pages */}
+              {/* On the main dashboard, the title is usually in the <main> section */}
+              {/* <div className="flex-1 md:hidden text-center">
+                  <Link href="/admin/dashboard" className="flex items-center gap-2 font-semibold justify-center">
+                      <Leaf className="h-5 w-5 text-green-600 dark:text-green-500" />
+                      <span className="text-lg">BenihKu Admin</span>
+                  </Link>
+              </div> */}
             </div>
 
-            {/* Desktop: Page Title (optional, can be moved to main section) */}
-            {/* <h1 className="hidden md:block text-xl font-semibold">Dashboard Produk</h1> */}
-            
-            {/* Mobile: Page Title shown in center if no menu */}
-             <div className="flex-1 md:hidden text-center">
-                 <Link href="/admin/dashboard" className="flex items-center gap-2 font-semibold justify-center">
-                    <Leaf className="h-5 w-5 text-green-600 dark:text-green-500" />
-                    <span className="text-lg">BenihKu Admin</span>
-                </Link>
-             </div>
-
-
-            <div className="ml-auto flex items-center gap-2 md:gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               <ThemeToggle />
-              {/* Mobile Logout is now part of the Sheet, Desktop logout is in the sidebar */}
             </div>
           </header>
           <main className="grid flex-1 items-start gap-4 p-4 md:gap-8 md:p-8">
@@ -267,7 +288,7 @@ export default function AdminDashboard() {
             </div>
 
             <Tabs defaultValue="all" className="w-full">
-              <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3"> {/* Adjusted for better mobile */}
+              <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3"> 
                 <TabsTrigger value="all">Semua Produk</TabsTrigger>
                 <TabsTrigger value="published">Dipublikasikan</TabsTrigger>
                 <TabsTrigger value="draft">Draft</TabsTrigger>
@@ -323,7 +344,7 @@ function ProductsTable({ products, isLoading, togglePopular }: ProductsTableProp
 
   return (
     <div className="rounded-md border dark:border-gray-800">
-      <div className="relative w-full overflow-auto"> {/* This handles table responsiveness */}
+      <div className="relative w-full overflow-auto"> 
         <table className="w-full caption-bottom text-sm">
           <thead className="[&_tr]:border-b dark:border-gray-800">
             <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted dark:border-gray-800">

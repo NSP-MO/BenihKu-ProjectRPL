@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Leaf, Package, LogOut, BarChart3, Settings, ShoppingBag, ArrowLeft } from "lucide-react"
+import Image from "next/image";
+import { Leaf, Package, LogOut, BarChart3, Settings, ShoppingBag, ArrowLeft, Menu } from "lucide-react" // Added Menu
 import { format } from "date-fns"
 
 import { Button } from "@/components/ui/button"
@@ -13,6 +14,8 @@ import { useAuth } from "@/contexts/auth-context"
 import { Loader2 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import type { OrderStatus } from "@/lib/orders"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet" // Added Sheet components
+import { Separator } from "@/components/ui/separator" // Added Separator
 
 interface DisplayOrder {
   id: string;
@@ -29,6 +32,7 @@ export default function AdminOrdersPage() {
   const router = useRouter()
   const [orders, setOrders] = useState<DisplayOrder[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // State for mobile menu
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -41,7 +45,7 @@ export default function AdminOrdersPage() {
 
         if (error) {
           console.error("Error fetching orders:", error)
-          setOrders([]) // Set to empty array on error
+          setOrders([]) 
           return
         }
         
@@ -53,7 +57,7 @@ export default function AdminOrdersPage() {
 
       } catch (error) {
         console.error("Error fetching orders:", error)
-        setOrders([]) // Set to empty array on error
+        setOrders([]) 
       } finally {
         setIsLoading(false)
       }
@@ -83,10 +87,19 @@ export default function AdminOrdersPage() {
         return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
     }
   }
+  
+  const adminNavLinks = [
+    { href: "/admin/dashboard", label: "Produk", icon: Package },
+    { href: "/admin/orders", label: "Pesanan", icon: ShoppingBag },
+    { href: "/admin/analytics", label: "Analitik", icon: BarChart3 },
+    { href: "/admin/settings", label: "Pengaturan", icon: Settings },
+  ];
+
 
   return (
     <ProtectedRoute adminOnly>
       <div className="flex min-h-screen">
+        {/* Desktop Sidebar */}
         <div className="hidden md:flex w-64 flex-col bg-background border-r dark:border-gray-800">
           <div className="flex h-16 items-center border-b dark:border-gray-800 px-6">
             <Link href="/" className="flex items-center gap-2 font-semibold">
@@ -95,51 +108,50 @@ export default function AdminOrdersPage() {
             </Link>
           </div>
           <div className="flex-1 overflow-auto py-2">
-            <nav className="grid items-start px-4 text-sm font-medium">
-              <Link
-                href="/admin"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all"
-              >
-                <Package className="h-4 w-4" />
-                Produk
-              </Link>
-              <Link
-                href="/admin/orders"
-                className="flex items-center gap-3 rounded-lg bg-accent px-3 py-2 text-accent-foreground transition-all"
-              >
-                <ShoppingBag className="h-4 w-4" />
-                Pesanan
-              </Link>
-              <Link
-                href="/admin/analytics"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all"
-              >
-                <BarChart3 className="h-4 w-4" />
-                Analitik
-              </Link>
-              <Link
-                href="/admin/setup"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all"
-              >
-                <Settings className="h-4 w-4" />
-                Setup
-              </Link>
+          <nav className="grid items-start px-4 text-sm font-medium">
+              {adminNavLinks.map(link => {
+                const Icon = link.icon;
+                const isActive = router.pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all ${
+                        isActive ? "bg-accent text-accent-foreground" : ""
+                    }`}
+                    onClick={() => setIsMobileMenuOpen(false)} // Close mobile menu on nav
+                  >
+                    <Icon className="h-4 w-4" />
+                    {link.label}
+                  </Link>
+                );
+               })}
             </nav>
           </div>
           <div className="border-t dark:border-gray-800 p-4">
-            <div className="flex items-center gap-3 rounded-lg px-3 py-2">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                  <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                    {user?.user_metadata?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "A"}
-                  </span>
+             {user && (
+                <div className="flex items-center gap-3 rounded-lg px-3 py-2 mb-2">
+                   {user.user_metadata?.avatar_url ? (
+                    <Image
+                      src={user.user_metadata.avatar_url as string}
+                      alt={user.user_metadata.name || user.email || "User Avatar"}
+                      width={32}
+                      height={32}
+                      className="rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                      <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                          {(user.user_metadata?.name || user.email || "A").charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium truncate max-w-[150px]">{user.user_metadata?.name || user.email}</p>
+                    <p className="text-xs text-muted-foreground truncate max-w-[150px]">{user.email}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">{user?.user_metadata?.name || user?.email}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
-                </div>
-              </div>
-            </div>
+            )}
             <Button
               variant="ghost"
               className="w-full justify-start text-muted-foreground hover:text-foreground mt-2"
@@ -150,24 +162,109 @@ export default function AdminOrdersPage() {
             </Button>
           </div>
         </div>
-        <div className="flex-1">
-          <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b dark:border-gray-800 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
-            <div className="md:hidden flex items-center gap-2 font-semibold">
-              <Leaf className="h-6 w-6 text-green-600 dark:text-green-500" />
-              <span className="text-xl">BenihKu</span>
+        <div className="flex-1 flex flex-col">
+          <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b dark:border-gray-800 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
+            <div className="flex items-center">
+              {/* Mobile Menu Trigger for Admin Orders List Page */}
+              <div className="md:hidden">
+                <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Menu className="h-6 w-6" />
+                      <span className="sr-only">Buka Menu</span>
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-[260px] p-0">
+                    <SheetHeader className="p-4 border-b dark:border-gray-800">
+                      <SheetTitle>
+                          <Link href="/admin/dashboard" className="flex items-center gap-2 font-semibold" onClick={() => setIsMobileMenuOpen(false)}>
+                              <Leaf className="h-6 w-6 text-green-600 dark:text-green-500" />
+                              <span className="text-xl">BenihKu Admin</span>
+                          </Link>
+                      </SheetTitle>
+                    </SheetHeader>
+                    <div className="flex-1 overflow-auto py-2 p-4">
+                      <nav className="grid items-start text-sm font-medium gap-1">
+                       {adminNavLinks.map(link => {
+                        const Icon = link.icon;
+                        const isActive = router.pathname === link.href;
+                        return (
+                          <Link
+                            key={link.href}
+                            href={link.href}
+                            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all ${
+                                isActive ? "bg-accent text-accent-foreground" : ""
+                            }`}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                          >
+                            <Icon className="h-4 w-4" />
+                            {link.label}
+                          </Link>
+                        );
+                       })}
+                      </nav>
+                    </div>
+                    <Separator className="my-2" />
+                     <div className="p-4 border-t dark:border-gray-800">
+                          {user && (
+                              <div className="flex items-center gap-3 rounded-lg px-3 py-2 mb-2">
+                                {user.user_metadata?.avatar_url ? (
+                                  <Image
+                                    src={user.user_metadata.avatar_url as string}
+                                    alt={user.user_metadata.name || user.email || "User Avatar"}
+                                    width={32}
+                                    height={32}
+                                    className="rounded-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                                        {(user.user_metadata?.name || user.email || "A").charAt(0).toUpperCase()}
+                                    </span>
+                                  </div>
+                                )}
+                                  <div>
+                                  <p className="text-sm font-medium truncate max-w-[150px]">{user.user_metadata?.name || user.email}</p>
+                                  <p className="text-xs text-muted-foreground truncate max-w-[150px]">{user.email}</p>
+                                  </div>
+                              </div>
+                          )}
+                          <Button
+                          variant="ghost"
+                          className="w-full justify-start text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                              handleLogout();
+                              setIsMobileMenuOpen(false);
+                          }}
+                          >
+                          <LogOut className="mr-2 h-4 w-4" />
+                          Keluar
+                          </Button>
+                      </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+               {/* Title for the page, shown on mobile when menu is closed, or on desktop */}
+              <h1 className="text-lg font-semibold md:text-xl ml-2 md:ml-0">Manajemen Pesanan</h1>
             </div>
-            <div className="ml-auto flex items-center gap-4">
+            
+            <div className="flex items-center gap-2 md:gap-4">
               <ThemeToggle />
-              <Button variant="ghost" size="icon" className="md:hidden" onClick={handleLogout}>
-                <LogOut className="h-5 w-5" />
-                <span className="sr-only">Keluar</span>
-              </Button>
+              {/* Mobile logout is now inside the Sheet/Mobile Menu */}
             </div>
           </header>
           <main className="grid flex-1 items-start gap-4 p-4 md:gap-8 md:p-8">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold">Manajemen Pesanan</h1>
-            </div>
+            {/* Desktop back button to dashboard if needed, or title */}
+             <div className="hidden md:flex items-center gap-4">
+                 <Link href="/admin/dashboard">
+                    <Button variant="outline" size="sm">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Dashboard
+                    </Button>
+                 </Link>
+             </div>
+
+
             {isLoading ? (
               <div className="flex justify-center items-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-green-600" />
@@ -190,7 +287,6 @@ export default function AdminOrdersPage() {
                         <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Aksi</th>
                       </tr>
                     </thead>
-                    {/* Ensure no whitespace directly inside tbody other than the map function's return */}
                     <tbody className="[&_tr:last-child]:border-0">{
                       orders.map((order) => (
                         <tr key={order.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted dark:border-gray-800">

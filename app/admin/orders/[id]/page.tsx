@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import Image from "next/image"; // Added import
 import { Leaf, Package, LogOut, BarChart3, Settings, ShoppingBag, ArrowLeft } from "lucide-react"
 import { format } from "date-fns"
-import Image from "next/image"
+
 
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -29,7 +30,6 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
     const fetchOrderDetails = async () => {
       setIsLoading(true)
       try {
-        // Get order details
         const { data: orderData, error: orderError } = await supabase
           .from("orders")
           .select("*")
@@ -38,10 +38,12 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
 
         if (orderError) {
           console.error(`Error fetching order with id ${params.id}:`, orderError)
+          // It's possible the order doesn't exist or user doesn't have permission (if RLS is strict)
+          // Redirect or show an error message. For now, we'll let it proceed to render "Pesanan tidak ditemukan".
+          setOrder(null);
           return
         }
 
-        // Get order items
         const { data: itemsData, error: itemsError } = await supabase
           .from("order_items")
           .select("*")
@@ -49,23 +51,24 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
 
         if (itemsError) {
           console.error(`Error fetching items for order ${params.id}:`, itemsError)
+          // Handle appropriately, maybe set order to null or show partial data
+          setOrder(null); // Or setOrder({ ...orderData, items: [] }) if you want to show order info without items
           return
         }
 
-        // Fetch product images for each item
         const itemsWithImages = await Promise.all(
           itemsData.map(async (item) => {
             try {
               const { data: productData, error: productError } = await supabase
                 .from("products")
-                .select("image, image_path")
+                .select("image, image_path") 
                 .eq("id", item.product_id)
                 .single()
 
               if (productError || !productData) {
                 return { ...item, product_image: "/placeholder.svg" }
               }
-
+              
               return {
                 ...item,
                 product_image: productData.image || productData.image_path || "/placeholder.svg",
@@ -77,20 +80,26 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
           }),
         )
 
-        // Combine order with items
         setOrder({
           ...orderData,
           items: itemsWithImages,
         })
       } catch (error) {
         console.error(`Error fetching order with id ${params.id}:`, error)
+        setOrder(null); // Set order to null on any critical error
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchOrderDetails()
-  }, [params.id])
+    if (params.id) { // Ensure params.id is available
+        fetchOrderDetails()
+    } else {
+        setIsLoading(false);
+        // Handle case where id is not present, perhaps redirect or show error
+        router.push('/admin/orders'); 
+    }
+  }, [params.id, router]) // Added router to dependency array
 
   const handleLogout = () => {
     logout()
@@ -120,7 +129,6 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
         return
       }
 
-      // Update local state
       setOrder({
         ...order,
         status: newStatus as OrderStatus,
@@ -159,6 +167,14 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
         return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
     }
   }
+  
+  const adminNavLinks = [
+    { href: "/admin/dashboard", label: "Produk", icon: Package },
+    { href: "/admin/orders", label: "Pesanan", icon: ShoppingBag },
+    { href: "/admin/analytics", label: "Analitik", icon: BarChart3 },
+    { href: "/admin/settings", label: "Pengaturan", icon: Settings },
+  ];
+
 
   return (
     <ProtectedRoute adminOnly>
@@ -172,51 +188,50 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
             </Link>
           </div>
           <div className="flex-1 overflow-auto py-2">
-            <nav className="grid items-start px-4 text-sm font-medium">
-              <Link
-                href="/admin"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all"
-              >
-                <Package className="h-4 w-4" />
-                Produk
-              </Link>
-              <Link
-                href="/admin/orders"
-                className="flex items-center gap-3 rounded-lg bg-accent px-3 py-2 text-accent-foreground transition-all"
-              >
-                <ShoppingBag className="h-4 w-4" />
-                Pesanan
-              </Link>
-              <Link
-                href="/admin/analytics"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all"
-              >
-                <BarChart3 className="h-4 w-4" />
-                Analitik
-              </Link>
-              <Link
-                href="/admin/setup"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all"
-              >
-                <Settings className="h-4 w-4" />
-                Setup
-              </Link>
+          <nav className="grid items-start px-4 text-sm font-medium">
+              {adminNavLinks.map(link => {
+                const Icon = link.icon;
+                // Corrected isActive condition for /admin/orders and its children
+                const isActive = router.pathname === link.href || (link.href === "/admin/orders" && router.pathname?.startsWith("/admin/orders"));
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all ${
+                        isActive ? "bg-accent text-accent-foreground" : ""
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {link.label}
+                  </Link>
+                );
+               })}
             </nav>
           </div>
           <div className="border-t dark:border-gray-800 p-4">
-            <div className="flex items-center gap-3 rounded-lg px-3 py-2">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
-                  <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                    {user?.user_metadata?.name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "A"}
-                  </span>
+            {user && (
+                <div className="flex items-center gap-3 rounded-lg px-3 py-2 mb-2">
+                  {user.user_metadata?.avatar_url ? (
+                    <Image
+                      src={user.user_metadata.avatar_url as string}
+                      alt={user.user_metadata.name || user.email || "User Avatar"}
+                      width={32}
+                      height={32}
+                      className="rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                      <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                          {(user.user_metadata?.name || user.email || "A").charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                    <div>
+                    <p className="text-sm font-medium truncate max-w-[150px]">{user.user_metadata?.name || user.email}</p>
+                    <p className="text-xs text-muted-foreground truncate max-w-[150px]">{user.email}</p>
+                    </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">{user?.user_metadata?.name || user?.email}</p>
-                  <p className="text-xs text-muted-foreground">{user?.email}</p>
-                </div>
-              </div>
-            </div>
+            )}
             <Button
               variant="ghost"
               className="w-full justify-start text-muted-foreground hover:text-foreground mt-2"
@@ -230,21 +245,33 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
 
         {/* Main content */}
         <div className="flex-1">
-          <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b dark:border-gray-800 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
-            <div className="md:hidden flex items-center gap-2 font-semibold">
-              <Leaf className="h-6 w-6 text-green-600 dark:text-green-500" />
-              <span className="text-xl">BenihKu</span>
-            </div>
-            <div className="ml-auto flex items-center gap-4">
-              <ThemeToggle />
-              <Button variant="ghost" size="icon" className="md:hidden" onClick={handleLogout}>
-                <LogOut className="h-5 w-5" />
-                <span className="sr-only">Keluar</span>
+          <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-4 border-b dark:border-gray-800 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6">
+            {/* Mobile Header: Back Button and Title */}
+            <div className="flex items-center gap-2 md:hidden">
+              <Button variant="ghost" size="icon" onClick={() => router.push('/admin/orders')}>
+                <ArrowLeft className="h-5 w-5" />
               </Button>
+              <h1 className="text-lg font-semibold">Detail Pesanan</h1>
+            </div>
+
+            {/* Desktop: Hidden placeholder or can be used for breadcrumbs later if needed */}
+            <div className="hidden md:flex flex-1">
+              {/* This space is intentionally left for the title that will be shown in <main> for desktop */}
+            </div>
+            
+            <div className="flex items-center gap-2 md:gap-4">
+              <ThemeToggle />
+              {user && (
+                <Button variant="ghost" size="icon" className="md:hidden" onClick={handleLogout}>
+                  <LogOut className="h-5 w-5" />
+                  <span className="sr-only">Keluar</span>
+                </Button>
+              )}
             </div>
           </header>
           <main className="grid flex-1 items-start gap-4 p-4 md:gap-8 md:p-8">
-            <div className="flex items-center gap-4">
+            {/* Desktop Back Button and Title */}
+            <div className="hidden md:flex items-center gap-4">
               <Link href="/admin/orders">
                 <Button variant="outline" size="icon">
                   <ArrowLeft className="h-4 w-4" />
@@ -260,6 +287,9 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
             ) : !order ? (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">Pesanan tidak ditemukan.</p>
+                 <Link href="/admin/orders">
+                    <Button variant="outline" className="mt-4">Kembali ke Daftar Pesanan</Button>
+                 </Link>
               </div>
             ) : (
               <div className="grid gap-6 md:grid-cols-2">
@@ -284,7 +314,7 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
                       </div>
                       <div>
                         <p className="text-sm font-medium text-muted-foreground">Total</p>
-                        <p className="font-medium">Rp {order.total.toLocaleString("id-ID")}</p>
+                        <p className="font-medium">Rp {order.total_amount.toLocaleString("id-ID")}</p>
                       </div>
                     </div>
                     <div>
@@ -305,23 +335,24 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
                   </CardContent>
                 </Card>
 
-                {order.shipping_address && (
+                {order.shipping_address && typeof order.shipping_address === 'object' && ( // Check if shipping_address is an object
                   <Card>
                     <CardHeader>
                       <CardTitle>Alamat Pengiriman</CardTitle>
                       <CardDescription>Detail alamat pengiriman</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                      <p className="font-medium">{order.shipping_address.name}</p>
-                      <p>{order.shipping_address.address}</p>
+                      <p className="font-medium">{(order.shipping_address as any).name}</p>
+                      <p>{(order.shipping_address as any).address}</p>
                       <p>
-                        {order.shipping_address.city}, {order.shipping_address.postal_code}
+                        {(order.shipping_address as any).city}, {(order.shipping_address as any).postal_code}
                       </p>
-                      <p>{order.shipping_address.country}</p>
-                      <p className="font-medium mt-2">{order.shipping_address.phone}</p>
+                      <p>{(order.shipping_address as any).country}</p>
+                      <p className="font-medium mt-2">{(order.shipping_address as any).phone}</p>
                     </CardContent>
                   </Card>
                 )}
+
 
                 <Card className="md:col-span-2">
                   <CardHeader>
@@ -373,7 +404,7 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
                                 <td className="p-4 align-middle">Rp {item.price.toLocaleString("id-ID")}</td>
                                 <td className="p-4 align-middle">{item.quantity}</td>
                                 <td className="p-4 align-middle font-medium">
-                                  Rp {item.subtotal.toLocaleString("id-ID")}
+                                  Rp {(item.price * item.quantity).toLocaleString("id-ID")}
                                 </td>
                               </tr>
                             ))}
@@ -386,7 +417,7 @@ export default function AdminOrderDetailPage({ params }: { params: { id: string 
                     <div></div>
                     <div className="text-right">
                       <p className="text-sm text-muted-foreground">Total Pesanan</p>
-                      <p className="text-xl font-bold">Rp {order.total.toLocaleString("id-ID")}</p>
+                      <p className="text-xl font-bold">Rp {order.total_amount.toLocaleString("id-ID")}</p>
                     </div>
                   </CardFooter>
                 </Card>
