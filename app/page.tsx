@@ -68,7 +68,7 @@ export default function Home() {
               <div className="mx-auto grid max-w-5xl items-center gap-6 py-12 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 <div className="flex flex-col items-center space-y-4 rounded-lg border p-6 dark:border-gray-700">
                   {/* Lingkaran nomor bisa menggunakan warna yang kontras atau senada */}
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-800"> 
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-800">
                     <span className="text-xl font-bold text-emerald-700 dark:text-emerald-200">1</span>
                   </div>
                   <h3 className="text-xl font-bold">Buka QR Scanner</h3>
@@ -99,14 +99,16 @@ export default function Home() {
           </div>
         </section>
       </main>
-      <footer className="w-full border-t bg-background py-6 dark:border-gray-800">
-        <div className="container flex flex-col items-center justify-center gap-4 text-center md:flex-row md:justify-between">
+      <footer className="w-full border-t bg-background py-8 dark:border-gray-800">
+        <div className="container flex flex-col items-center justify-between gap-6 md:flex-row">
           <div className="flex items-center gap-2">
-            <Leaf className="h-5 w-5 text-green-600 dark:text-green-500" />
-            <span className="text-lg font-semibold">BenihKu</span>
+            <Leaf className="h-6 w-6 text-green-600 dark:text-green-500" />
+            <span className="text-xl font-semibold">BenihKu</span>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400">© 2025 BenihKu. Semua hak dilindungi.</p>
-          <div className="flex gap-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center md:text-left">
+            © 2025 BenihKu. Semua hak dilindungi.
+          </p>
+          <div className="flex gap-4 sm:gap-6">
             <Link href="#" className="text-sm font-medium hover:text-green-600 dark:hover:text-green-500">
               Syarat & Ketentuan
             </Link>
