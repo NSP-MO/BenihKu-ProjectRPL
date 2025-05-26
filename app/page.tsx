@@ -98,15 +98,17 @@ export default function Home() {
       </main>
       <footer className="w-full border-t bg-background py-8 dark:border-gray-800">
         <div className="container flex flex-col items-center justify-between gap-6 md:flex-row">
-          <div className="flex items-center gap-2">
+          {/* Logo section with flex-1 for desktop */}
+          <div className="md:flex-1 flex items-center justify-center md:justify-start gap-2">
             <Leaf className="h-6 w-6 text-green-600 dark:text-green-500" />
             <span className="text-xl font-semibold">BenihKu</span>
           </div>
-          {/* Adjusted copyright paragraph for desktop alignment */}
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center md:flex-grow md:text-right">
+          {/* Copyright notice - centered text */}
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center order-last md:order-none md:flex-shrink-0">
             © 2025 BenihKu. Semua hak dilindungi.
           </p>
-          <div className="flex gap-4 sm:gap-6">
+          {/* Links section with flex-1 and content justified to the end for desktop */}
+          <div className="md:flex-1 flex justify-center md:justify-end gap-4 sm:gap-6">
             <Link href="#" className="text-sm font-medium hover:text-green-600 dark:hover:text-green-500">
               Syarat & Ketentuan
             </Link>
