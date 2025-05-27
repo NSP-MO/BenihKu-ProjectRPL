@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ArrowLeft, Paperclip, Send, CornerDownLeft, UserCircle, Image as ImageIcon, X as XIcon, Sparkles } from "lucide-react"
+import { ArrowLeft, Paperclip, Send, CornerDownLeft, UserCircle, Sparkles, Image as ImageIcon, X as XIcon } from "lucide-react" // Mengganti Bot dengan Sparkles untuk AI avatar fallback
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Header from "@/components/header"
@@ -15,13 +15,17 @@ import { Card, CardContent } from "@/components/ui/card";
 
 interface Message {
   id: string
-  text: string
+  text: string        // Teks penuh dari pesan
+  displayText?: string // Teks yang ditampilkan (untuk efek ketik)
   sender: "user" | "ai"
   timestamp: Date
   imagePreview?: string
   imageUrl?: string
   error?: string
+  isTyping?: boolean   // Status untuk efek ketik
 }
+
+const TYPING_SPEED = 50; // Milidetik per karakter
 
 export default function AiChatbotPage() {
   const router = useRouter()
@@ -33,24 +37,50 @@ export default function AiChatbotPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // URL untuk avatar AI baru (contoh)
-  const aiAvatarUrl = "https://source.boringavatars.com/beam/120/AI%20BenihKu?colors=264653,2a9d8f,e9c46a,f4a261,e76f51";
-
+  const aiAvatarUrl = "https://source.boringavatars.com/beam/120/BenihKuAI?colors=264653,2a9d8f,e9c46a,f4a261,e76f51";
 
   useEffect(() => {
     setMessages([
       {
         id: "welcome-ai",
         text: "Halo! Saya BenihKu AI, asisten virtual Anda untuk semua hal tentang tanaman. Ada yang bisa saya bantu?",
+        displayText: "Halo! Saya BenihKu AI, asisten virtual Anda untuk semua hal tentang tanaman. Ada yang bisa saya bantu?",
         sender: "ai",
         timestamp: new Date(),
+        isTyping: false,
       },
     ])
   }, [])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
+  }, [messages, messages.length > 0 && messages[messages.length-1].displayText])
+
+
+  // Efek ketik untuk pesan AI
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage && lastMessage.sender === "ai" && lastMessage.isTyping && lastMessage.text && lastMessage.displayText !== undefined && lastMessage.displayText.length < lastMessage.text.length) {
+      const timer = setTimeout(() => {
+        setMessages(prevMessages =>
+          prevMessages.map(msg =>
+            msg.id === lastMessage.id
+              ? { ...msg, displayText: msg.text.substring(0, (msg.displayText?.length || 0) + 1) }
+              : msg
+          )
+        );
+      }, TYPING_SPEED);
+      return () => clearTimeout(timer);
+    } else if (lastMessage && lastMessage.sender === "ai" && lastMessage.isTyping && lastMessage.text && lastMessage.displayText?.length === lastMessage.text.length) {
+      // Selesai mengetik
+      setMessages(prevMessages =>
+        prevMessages.map(msg =>
+          msg.id === lastMessage.id ? { ...msg, isTyping: false } : msg
+        )
+      );
+    }
+  }, [messages]);
+
 
   const handleSendMessage = async () => {
     if (inputMessage.trim() === "" && !uploadedImage) return
@@ -59,9 +89,11 @@ export default function AiChatbotPage() {
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       text: userMessageText,
+      displayText: userMessageText, // Teks pengguna langsung tampil penuh
       sender: "user",
       timestamp: new Date(),
       imagePreview: imagePreview || undefined,
+      isTyping: false,
     }
 
     setMessages((prevMessages) => [...prevMessages, userMessage])
@@ -75,7 +107,18 @@ export default function AiChatbotPage() {
     }
     setIsLoading(true)
 
-    let aiResponseMessage: Message | null = null;
+    // Placeholder untuk pesan AI yang sedang "mengetik"
+    const aiTypingPlaceholderId = `ai-typing-${Date.now()}`;
+    const aiTypingPlaceholder: Message = {
+        id: aiTypingPlaceholderId,
+        text: "", // Teks asli akan diisi nanti
+        displayText: "", // Mulai kosong untuk efek ketik
+        sender: "ai",
+        timestamp: new Date(),
+        isTyping: true, // Tandai bahwa ini sedang proses "mengetik"
+    };
+    setMessages(prevMessages => [...prevMessages, aiTypingPlaceholder]);
+
 
     try {
       const formData = new FormData();
@@ -91,8 +134,7 @@ export default function AiChatbotPage() {
         body: formData,
       });
 
-      let responseData;
-      const responseText = await response.text();
+      const responseText = await response.text(); 
 
       if (!response.ok) {
         let errorMessageFromServer = `Request failed with status ${response.status}.`;
@@ -108,20 +150,22 @@ export default function AiChatbotPage() {
         }
         throw new Error(errorMessageFromServer);
       }
-
-      try {
-        responseData = JSON.parse(responseText);
-      } catch (jsonError) {
-        throw new Error(`Server returned malformed JSON. Content: ${responseText.substring(0, 200)}...`);
-      }
       
-      aiResponseMessage = {
-        id: responseData.id || `ai-fallback-${Date.now()}`,
-        text: responseData.text || "Tidak ada respons teks dari AI.",
-        sender: "ai",
-        timestamp: new Date(responseData.timestamp || Date.now()),
-        imageUrl: responseData.imageUrl,
-      };
+      const responseData = JSON.parse(responseText);
+      
+      // Update placeholder dengan pesan AI yang sebenarnya
+      setMessages(prevMessages => prevMessages.map(msg => 
+        msg.id === aiTypingPlaceholderId ? {
+          ...msg,
+          id: responseData.id || aiTypingPlaceholderId, // Gunakan ID dari server jika ada
+          text: responseData.text || "Tidak ada respons teks dari AI.",
+          // displayText akan diupdate oleh useEffect typing
+          imageUrl: responseData.imageUrl,
+          timestamp: new Date(responseData.timestamp || Date.now()),
+          isTyping: true, // Biarkan true agar efek ketik dimulai
+        } : msg
+      ));
+
 
     } catch (error: any) {
       toast({
@@ -130,18 +174,18 @@ export default function AiChatbotPage() {
         variant: "destructive",
       });
       
-      aiResponseMessage = {
-        id: `error-${Date.now()}`,
-        text: `Maaf, terjadi kesalahan: ${error.message || "Tidak dapat memproses permintaan."}`,
-        sender: "ai",
-        timestamp: new Date(),
-        error: error.message,
-      };
+      // Update placeholder menjadi pesan error
+       setMessages(prevMessages => prevMessages.map(msg =>
+        msg.id === aiTypingPlaceholderId ? {
+            ...msg,
+            text: `Maaf, terjadi kesalahan: ${error.message || "Tidak dapat memproses permintaan."}`,
+            displayText: `Maaf, terjadi kesalahan: ${error.message || "Tidak dapat memproses permintaan."}`,
+            error: error.message,
+            isTyping: false,
+        } : msg
+      ));
     } finally {
-      if (aiResponseMessage) {
-        setMessages((prevMessages) => [...prevMessages, aiResponseMessage!]);
-      }
-      setIsLoading(false);
+      setIsLoading(false); // Loading UI dihentikan setelah respons (sukses/gagal) diterima
     }
   };
 
@@ -200,14 +244,15 @@ export default function AiChatbotPage() {
         </div>
 
         <Card className="flex-1 flex flex-col overflow-hidden shadow-xl rounded-xl border-gray-200 dark:border-gray-700/80 bg-white/80 dark:bg-gray-800/70 backdrop-blur-md">
-          <ScrollArea className="flex-1 p-4 sm:p-6 space-y-4">
+          {/* Increased vertical spacing between messages using space-y-6 */}
+          <ScrollArea className="flex-1 p-4 sm:p-6 space-y-6"> 
             {messages.map((msg) => (
               <div
                 key={msg.id}
                 className={`flex items-end gap-2.5 ${msg.sender === "user" ? "justify-end" : ""}`}
               >
                 {msg.sender === "ai" && (
-                  <Avatar className="h-9 w-9 shadow-sm">
+                  <Avatar className="h-9 w-9 shadow-sm self-end">
                     <AvatarImage src={aiAvatarUrl} alt="BenihKu AI Avatar" /> 
                     <AvatarFallback className="bg-green-500 text-white">
                         <Sparkles className="h-5 w-5"/>
@@ -215,11 +260,13 @@ export default function AiChatbotPage() {
                   </Avatar>
                 )}
                 <div
-                  className={`max-w-[75%] p-3 rounded-xl shadow-md text-sm ${ 
+                  className={`max-w-[75%] p-3 rounded-xl shadow-md text-sm break-words ${ 
                     msg.sender === "user"
-                      ? "bg-green-600 text-white rounded-br-none dark:bg-green-500"
-                      : (msg.error ? "bg-red-100 dark:bg-red-800/60 text-red-700 dark:text-red-300 rounded-bl-none border border-red-200 dark:border-red-700" 
-                                   : "bg-gray-100 dark:bg-gray-700/80 text-gray-800 dark:text-gray-100 rounded-bl-none border border-gray-200 dark:border-gray-600/50")
+                      // Darker green for user bubble
+                      ? "bg-green-700 text-white rounded-br-none dark:bg-green-600" 
+                      : (msg.error 
+                          ? "bg-red-100 dark:bg-red-800/60 text-red-700 dark:text-red-300 rounded-bl-none border border-red-200 dark:border-red-700" 
+                          : "bg-gray-100 dark:bg-gray-700/80 text-gray-800 dark:text-gray-100 rounded-bl-none border border-gray-200 dark:border-gray-600/50")
                   }`}
                 >
                   {msg.imagePreview && (
@@ -227,7 +274,15 @@ export default function AiChatbotPage() {
                        <Image src={msg.imagePreview} alt="Uploaded preview" width={150} height={150} className="rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm"/>
                     </div>
                   )}
-                  <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                  <p className="whitespace-pre-wrap leading-relaxed">
+                    {msg.sender === "ai" && msg.isTyping && msg.displayText === "" && !msg.text ? (
+                         <div className="flex items-center space-x-1.5 py-1">
+                            <span className="h-1.5 w-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-75"></span>
+                            <span className="h-1.5 w-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-150"></span>
+                            <span className="h-1.5 w-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-200"></span>
+                        </div>
+                    ) : (msg.displayText || msg.text)}
+                  </p>
                   <p className={`text-xs mt-1.5 opacity-80 ${
                       msg.sender === 'user' ? 'text-green-100 dark:text-green-200' 
                       : msg.error ? 'text-red-500 dark:text-red-400' 
@@ -238,7 +293,7 @@ export default function AiChatbotPage() {
                   </p>
                 </div>
                  {msg.sender === "user" && (
-                  <Avatar className="h-9 w-9 shadow-sm">
+                  <Avatar className="h-9 w-9 shadow-sm self-end">
                      <AvatarFallback className="bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200">
                         <UserCircle className="h-5 w-5"/>
                     </AvatarFallback>
@@ -247,21 +302,7 @@ export default function AiChatbotPage() {
               </div>
             ))}
             <div ref={messagesEndRef} />
-            {isLoading && (
-                <div className="flex items-end gap-2.5">
-                    <Avatar className="h-9 w-9 shadow-sm">
-                        <AvatarImage src={aiAvatarUrl} alt="BenihKu AI Avatar" />
-                         <AvatarFallback className="bg-green-500 text-white"><Sparkles className="h-5 w-5"/></AvatarFallback>
-                    </Avatar>
-                    <div className="max-w-[70%] p-3 rounded-xl bg-gray-100 dark:bg-gray-700/80 text-gray-800 dark:text-gray-100 rounded-bl-none shadow-md border border-gray-200 dark:border-gray-600/50">
-                        <div className="flex items-center space-x-1.5">
-                            <span className="h-2 w-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-75"></span>
-                            <span className="h-2 w-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-150"></span>
-                            <span className="h-2 w-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-200"></span>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Placeholder for AI typing (dots) is now handled inside message rendering */}
           </ScrollArea>
 
           <CardContent className="border-t p-4 dark:border-gray-700/80 bg-white/90 dark:bg-gray-800/80">
