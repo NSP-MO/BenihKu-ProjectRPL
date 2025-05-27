@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ArrowLeft, Paperclip, Send, CornerDownLeft, UserCircle, Sparkles, Image as ImageIcon, X as XIcon } from "lucide-react"
+import { ArrowLeft, Paperclip, Send, CornerDownLeft, UserCircle, Sparkles, Image as ImageIcon, X as XIcon } from "lucide-react" // Pastikan Sparkles ada
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Header from "@/components/header"
@@ -25,24 +25,13 @@ interface Message {
   isTyping?: boolean
 }
 
-const TYPING_SPEED = 2; // Kecepatan ketik (ms per karakter)
+const TYPING_SPEED = 2;
 
-// Fungsi untuk mem-parsing Markdown sederhana ke HTML
 const parseSimpleMarkdown = (text: string) => {
   if (!text) return { __html: "" };
-
   let html = text;
-  // **Bold** -> <strong>Bold</strong>
   html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-  // *Italic* -> <em>Italic</em> (Contoh tambahan, bisa diaktifkan jika perlu)
-  // html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
-
-  // Mengganti baris baru dengan <br /> untuk mempertahankan format paragraf dari AI
   html = html.replace(/\n/g, "<br />");
-
-  // Parsing untuk list sederhana
-  // - Item -> <ul><li>Item</li></ul>
-  // Ini adalah penyederhanaan, untuk list yang lebih kompleks mungkin perlu parser yang lebih canggih
   if (html.includes("<br />- ") || html.startsWith("- ")) {
     const lines = html.split("<br />");
     let inList = false;
@@ -62,18 +51,14 @@ const parseSimpleMarkdown = (text: string) => {
         return line;
       }
     }).join("<br />");
-    if (inList) { // Menutup <ul> jika elemen terakhir adalah list item
+    if (inList) {
       html += "</ul>";
     }
-    // Membersihkan <br /> yang mungkin tidak perlu setelah </ul> atau sebelum <ul>
     html = html.replace(/<\/ul><br \/>/g, "</ul>");
     html = html.replace(/<br \/><ul>/g, "<ul>");
   }
-
-
   return { __html: html };
 };
-
 
 export default function AiChatbotPage() {
   const router = useRouter()
@@ -93,7 +78,7 @@ export default function AiChatbotPage() {
       {
         id: "welcome-ai",
         text: initialMessageText,
-        displayText: initialMessageText, // Tampil penuh saat awal
+        displayText: initialMessageText,
         sender: "ai",
         timestamp: new Date(),
         isTyping: false,
@@ -154,16 +139,17 @@ export default function AiChatbotPage() {
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
-    setIsLoading(true)
+    setIsLoading(true) // Ini akan menampilkan loading global jika diperlukan, tapi kita fokus pada placeholder per pesan
 
     const aiTypingPlaceholderId = `ai-typing-${Date.now()}`;
+    // Pesan placeholder AI, displayText akan diisi oleh efek ketik nanti
     const aiTypingPlaceholder: Message = {
         id: aiTypingPlaceholderId,
-        text: "", 
-        displayText: "",
+        text: "", // Teks asli akan diisi setelah fetch
+        displayText: "", // Mulai kosong untuk efek ketik atau animasi loading
         sender: "ai",
         timestamp: new Date(),
-        isTyping: true, 
+        isTyping: true, // Tandai bahwa AI sedang "menyiapkan" jawaban
     };
     setMessages(prevMessages => [...prevMessages, aiTypingPlaceholder]);
 
@@ -201,11 +187,14 @@ export default function AiChatbotPage() {
       
       const responseData = JSON.parse(responseText);
       
+      // Update placeholder dengan pesan AI yang sebenarnya
+      // isTyping tetap true agar efek ketik dimulai oleh useEffect
       setMessages(prevMessages => prevMessages.map(msg => 
         msg.id === aiTypingPlaceholderId ? {
           ...msg,
-          id: responseData.id || aiTypingPlaceholderId,
+          id: responseData.id || aiTypingPlaceholderId, // Gunakan ID dari server jika ada
           text: responseData.text || "Tidak ada respons teks dari AI.",
+          // displayText akan diupdate oleh useEffect typing dari "" menjadi text penuh
           imageUrl: responseData.imageUrl,
           timestamp: new Date(responseData.timestamp || Date.now()),
           isTyping: true, 
@@ -219,17 +208,18 @@ export default function AiChatbotPage() {
         variant: "destructive",
       });
       
+      // Update placeholder menjadi pesan error, dan isTyping false karena tidak ada yang diketik
        setMessages(prevMessages => prevMessages.map(msg =>
         msg.id === aiTypingPlaceholderId ? {
             ...msg,
             text: `Maaf, terjadi kesalahan: ${error.message || "Tidak dapat memproses permintaan."}`,
-            displayText: `Maaf, terjadi kesalahan: ${error.message || "Tidak dapat memproses permintaan."}`,
+            displayText: `Maaf, terjadi kesalahan: ${error.message || "Tidak dapat memproses permintaan."}`, // Tampilkan error langsung
             error: error.message,
-            isTyping: false,
+            isTyping: false, // Tidak ada efek ketik untuk error
         } : msg
       ));
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Status loading global dihentikan di sini
     }
   };
 
@@ -316,17 +306,18 @@ export default function AiChatbotPage() {
                        <Image src={msg.imagePreview} alt="Uploaded preview" width={150} height={150} className="rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm"/>
                     </div>
                   )}
-                  {/* Menggunakan dangerouslySetInnerHTML untuk merender HTML dari parser */}
-                  <div
-                    className="whitespace-pre-wrap leading-relaxed prose prose-sm dark:prose-invert max-w-full 
-                               prose-strong:font-semibold 
-                               prose-ul:list-disc prose-ul:pl-5 prose-li:my-0.5" // Styling untuk list
-                    dangerouslySetInnerHTML={parseSimpleMarkdown(
-                      msg.sender === "ai" && msg.isTyping && msg.displayText === "" && !msg.text 
-                      ? "..." // Placeholder sederhana saat AI loading awal
-                      : msg.displayText || msg.text || ""
-                    )}
-                  />
+                  {/* Ganti placeholder loading awal */}
+                  {msg.sender === "ai" && msg.isTyping && msg.displayText === "" && !msg.text && !msg.error ? (
+                     <div className="flex items-center space-x-2 py-1 text-gray-500 dark:text-gray-400">
+                        <Sparkles className="h-4 w-4 animate-pulse text-yellow-400" /> 
+                        <span>BenihKu AI sedang mengetik...</span>
+                    </div>
+                  ) : (
+                    <div
+                      className="whitespace-pre-wrap leading-relaxed prose prose-sm dark:prose-invert max-w-full prose-strong:font-semibold prose-ul:list-disc prose-ul:pl-5 prose-li:my-0.5"
+                      dangerouslySetInnerHTML={parseSimpleMarkdown(msg.displayText || msg.text || "")}
+                    />
+                  )}
                   <p className={`text-xs mt-1.5 opacity-80 ${
                       msg.sender === 'user' ? 'text-green-100 dark:text-green-200' 
                       : msg.error ? 'text-red-500 dark:text-red-400' 
