@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Header from "@/components/header"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea" // Mengganti Input dengan Textarea
+import { Textarea } from "@/components/ui/textarea" // Menggunakan Textarea
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "@/components/ui/use-toast"
@@ -365,7 +365,7 @@ export default function AiChatbotPage() {
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder="Ketik pesan Anda..."
                 className="flex-1 h-10 rounded-full px-4 py-2 dark:bg-gray-700 dark:border-gray-600 focus-visible:ring-green-500 placeholder-gray-400 dark:placeholder-gray-500 resize-none leading-tight"
-                rows={1}
+                rows={1} 
                 disabled={isLoading}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -373,7 +373,6 @@ export default function AiChatbotPage() {
                     handleSendMessage();
                   }
                 }}
-                style={{ overflowY: inputMessage.split('\n').length > 1 || inputMessage.length > 50 ? 'auto' : 'hidden', height: inputMessage.split('\n').length > 1 || inputMessage.length > 50 ? 'auto' : '2.5rem' }} // Adjust height dynamically or keep fixed with scroll
               />
               <Button type="submit" disabled={isLoading || (inputMessage.trim() === "" && !uploadedImage)} className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 rounded-full h-10 w-10 p-0">
                 {isLoading ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-transparent border-t-white border-r-white"></span> : <Send className="h-5 w-5" />}
