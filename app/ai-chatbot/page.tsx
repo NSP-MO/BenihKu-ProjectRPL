@@ -2,12 +2,12 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ArrowLeft, Paperclip, Send, CornerDownLeft, UserCircle, Sparkles, Image as ImageIcon, X as XIcon } from "lucide-react"
+import { ArrowLeft, Paperclip, Send, CornerDownLeft, UserCircle, Sparkles, Image as ImageIcon, X as XIcon } from "lucide-react" // Pastikan Sparkles ada
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Header from "@/components/header"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea" // Menggunakan Textarea
+import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "@/components/ui/use-toast"
@@ -139,16 +139,17 @@ export default function AiChatbotPage() {
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
-    setIsLoading(true)
+    setIsLoading(true) // Ini akan menampilkan loading global jika diperlukan, tapi kita fokus pada placeholder per pesan
 
     const aiTypingPlaceholderId = `ai-typing-${Date.now()}`;
+    // Pesan placeholder AI, displayText akan diisi oleh efek ketik nanti
     const aiTypingPlaceholder: Message = {
         id: aiTypingPlaceholderId,
-        text: "", 
-        displayText: "", 
+        text: "", // Teks asli akan diisi setelah fetch
+        displayText: "", // Mulai kosong untuk efek ketik atau animasi loading
         sender: "ai",
         timestamp: new Date(),
-        isTyping: true, 
+        isTyping: true, // Tandai bahwa AI sedang "menyiapkan" jawaban
     };
     setMessages(prevMessages => [...prevMessages, aiTypingPlaceholder]);
 
@@ -186,11 +187,14 @@ export default function AiChatbotPage() {
       
       const responseData = JSON.parse(responseText);
       
+      // Update placeholder dengan pesan AI yang sebenarnya
+      // isTyping tetap true agar efek ketik dimulai oleh useEffect
       setMessages(prevMessages => prevMessages.map(msg => 
         msg.id === aiTypingPlaceholderId ? {
           ...msg,
-          id: responseData.id || aiTypingPlaceholderId, 
+          id: responseData.id || aiTypingPlaceholderId, // Gunakan ID dari server jika ada
           text: responseData.text || "Tidak ada respons teks dari AI.",
+          // displayText akan diupdate oleh useEffect typing dari "" menjadi text penuh
           imageUrl: responseData.imageUrl,
           timestamp: new Date(responseData.timestamp || Date.now()),
           isTyping: true, 
@@ -204,17 +208,18 @@ export default function AiChatbotPage() {
         variant: "destructive",
       });
       
+      // Update placeholder menjadi pesan error, dan isTyping false karena tidak ada yang diketik
        setMessages(prevMessages => prevMessages.map(msg =>
         msg.id === aiTypingPlaceholderId ? {
             ...msg,
             text: `Maaf, terjadi kesalahan: ${error.message || "Tidak dapat memproses permintaan."}`,
-            displayText: `Maaf, terjadi kesalahan: ${error.message || "Tidak dapat memproses permintaan."}`,
+            displayText: `Maaf, terjadi kesalahan: ${error.message || "Tidak dapat memproses permintaan."}`, // Tampilkan error langsung
             error: error.message,
-            isTyping: false, 
+            isTyping: false, // Tidak ada efek ketik untuk error
         } : msg
       ));
     } finally {
-      setIsLoading(false); 
+      setIsLoading(false); // Status loading global dihentikan di sini
     }
   };
 
@@ -301,6 +306,7 @@ export default function AiChatbotPage() {
                        <Image src={msg.imagePreview} alt="Uploaded preview" width={150} height={150} className="rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm"/>
                     </div>
                   )}
+                  {/* Ganti placeholder loading awal */}
                   {msg.sender === "ai" && msg.isTyping && msg.displayText === "" && !msg.text && !msg.error ? (
                      <div className="flex items-center space-x-2 py-1 text-gray-500 dark:text-gray-400">
                         <Sparkles className="h-4 w-4 animate-pulse text-yellow-400" /> 
@@ -360,12 +366,12 @@ export default function AiChatbotPage() {
               <Button variant="outline" size="icon" type="button" onClick={triggerFileInput} aria-label="Unggah Gambar" disabled={isLoading} className="rounded-full h-10 w-10 dark:border-gray-600 hover:bg-green-100 dark:hover:bg-green-700/50 focus-visible:ring-green-500">
                 <Paperclip className="h-5 w-5 text-gray-600 dark:text-gray-300" />
               </Button>
-              <Textarea
+              <Input
+                type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder="Ketik pesan Anda..."
-                className="flex-1 h-10 rounded-full px-4 py-2 dark:bg-gray-700 dark:border-gray-600 focus-visible:ring-green-500 placeholder-gray-400 dark:placeholder-gray-500 resize-none leading-tight"
-                rows={1} 
+                className="flex-1 h-10 rounded-full px-4 dark:bg-gray-700 dark:border-gray-600 focus-visible:ring-green-500 placeholder-gray-400 dark:placeholder-gray-500"
                 disabled={isLoading}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
