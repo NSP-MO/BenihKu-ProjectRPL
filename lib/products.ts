@@ -1,3 +1,4 @@
+// lib/products.ts
 "use server"
 
 import { createServerSupabaseClient } from "@/lib/supabase"
@@ -7,13 +8,13 @@ export type Product = {
   id: number
   name: string
   price: number
-  image: string
+  image: string // Assuming this is the primary image URL for the grid
   category: string
-  description: string
+  description: string // Kept for potential use, though grid might not show full desc
   is_popular: boolean
   is_published?: boolean
   stock?: number
-  image_path?: string
+  image_path?: string // For potential image construction if 'image' is not a direct URL
   image_bucket?: string
   care_instructions?: {
     light: string
@@ -28,14 +29,21 @@ export type Product = {
     rating: number
     response_time: string
   }
-  status?: string
+  status?: string // This seems redundant if is_published is used
 }
 
-// ... (getProducts, getProductById, getProductsByCategory remain the same) ...
+// Define the columns needed for the product grid on the homepage
+const PRODUCT_GRID_COLUMNS = "id, name, price, image, category, is_popular, is_published"
+
 export async function getProducts() {
   const supabase = createServerSupabaseClient()
   try {
-    const { data, error } = await supabase.from("products").select("*").eq("is_published", true).order("id")
+    const { data, error } = await supabase
+      .from("products")
+      .select(PRODUCT_GRID_COLUMNS) // Optimized to select specific columns
+      .eq("is_published", true)
+      .order("id")
+
     if (error) {
       if (error.message.includes("relation") && error.message.includes("does not exist")) {
         console.error("Products table does not exist. Please run the setup process.")
@@ -54,6 +62,8 @@ export async function getProducts() {
 export async function getProductById(id: number): Promise<Product | null> {
   const supabase = createServerSupabaseClient()
   try {
+    // For individual product page, we might want all details, so select("*") can remain,
+    // or be more specific if certain large JSON fields are not always needed immediately.
     const { data, error } = await supabase.from("products").select("*").eq("id", id).single()
     if (error) {
       if (error.code === "PGRST116") {
@@ -75,9 +85,10 @@ export async function getProductsByCategory(category: string) {
   try {
     const { data, error } = await supabase
       .from("products")
-      .select("*")
+      .select(PRODUCT_GRID_COLUMNS) // Optimized to select specific columns
       .eq("category", category)
       .eq("is_published", true)
+
     if (error) {
       if (error.message.includes("relation") && error.message.includes("does not exist")) {
         console.error("Products table does not exist. Please run the setup process.")
@@ -92,9 +103,8 @@ export async function getProductsByCategory(category: string) {
     return []
   }
 }
-// Updated function
+
 export async function getPopularProducts() {
-  // Removed explicit limit parameter
   const supabase = createServerSupabaseClient()
   let limit = 6 // Default limit
 
@@ -110,10 +120,10 @@ export async function getPopularProducts() {
   try {
     const { data, error } = await supabase
       .from("products")
-      .select("*")
+      .select(PRODUCT_GRID_COLUMNS) // Optimized to select specific columns
       .eq("is_popular", true)
       .eq("is_published", true)
-      .limit(limit) // Use the fetched or default limit
+      .limit(limit)
 
     if (error) {
       if (error.message.includes("relation") && error.message.includes("does not exist")) {
@@ -130,11 +140,9 @@ export async function getPopularProducts() {
   }
 }
 
-// New function to get all unique categories
 export async function getAllCategories(): Promise<string[]> {
   const supabase = createServerSupabaseClient()
   try {
-    // First try to get distinct categories
     const { data, error } = await supabase
       .from("products")
       .select("category")
@@ -143,16 +151,13 @@ export async function getAllCategories(): Promise<string[]> {
 
     if (error) {
       console.error("Error fetching categories:", error)
-      // Return default categories as fallback
       return ["Tanaman Hias", "Tanaman Indoor", "Tanaman Outdoor", "Tanaman Gantung", "Kaktus & Sukulen"]
     }
 
-    // Extract unique categories
     const categories = [...new Set(data.map((item) => item.category))]
-      .filter(Boolean) // Remove empty strings
-      .sort() // Sort alphabetically
+      .filter(Boolean)
+      .sort()
 
-    // If no categories found, return default list
     if (categories.length === 0) {
       return ["Tanaman Hias", "Tanaman Indoor", "Tanaman Outdoor", "Tanaman Gantung", "Kaktus & Sukulen"]
     }
@@ -160,7 +165,6 @@ export async function getAllCategories(): Promise<string[]> {
     return categories
   } catch (error) {
     console.error("Error fetching categories:", error)
-    // Return default categories as fallback
     return ["Tanaman Hias", "Tanaman Indoor", "Tanaman Outdoor", "Tanaman Gantung", "Kaktus & Sukulen"]
   }
 }
