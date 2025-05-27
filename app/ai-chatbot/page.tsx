@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ArrowLeft, Paperclip, Send, CornerDownLeft, UserCircle, Sparkles, Image as ImageIcon, X as XIcon } from "lucide-react" // Mengganti Bot dengan Sparkles untuk AI avatar fallback
+import { ArrowLeft, Paperclip, Send, CornerDownLeft, UserCircle, Sparkles, Image as ImageIcon, X as XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Header from "@/components/header"
@@ -15,17 +15,18 @@ import { Card, CardContent } from "@/components/ui/card";
 
 interface Message {
   id: string
-  text: string        // Teks penuh dari pesan
-  displayText?: string // Teks yang ditampilkan (untuk efek ketik)
+  text: string
+  displayText?: string
   sender: "user" | "ai"
   timestamp: Date
   imagePreview?: string
   imageUrl?: string
   error?: string
-  isTyping?: boolean   // Status untuk efek ketik
+  isTyping?: boolean
 }
 
-const TYPING_SPEED = 50; // Milidetik per karakter
+// Kecepatan ketik disesuaikan agar lebih cepat
+const TYPING_SPEED = 8; // Milidetik per karakter (sebelumnya 50)
 
 export default function AiChatbotPage() {
   const router = useRouter()
@@ -53,11 +54,13 @@ export default function AiChatbotPage() {
   }, [])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages, messages.length > 0 && messages[messages.length-1].displayText])
+    // Scroll ke bawah ketika ada pesan baru atau teks sedang diketik
+    if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, messages.length > 0 && messages[messages.length-1].displayText]);
 
 
-  // Efek ketik untuk pesan AI
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
     if (lastMessage && lastMessage.sender === "ai" && lastMessage.isTyping && lastMessage.text && lastMessage.displayText !== undefined && lastMessage.displayText.length < lastMessage.text.length) {
@@ -72,7 +75,6 @@ export default function AiChatbotPage() {
       }, TYPING_SPEED);
       return () => clearTimeout(timer);
     } else if (lastMessage && lastMessage.sender === "ai" && lastMessage.isTyping && lastMessage.text && lastMessage.displayText?.length === lastMessage.text.length) {
-      // Selesai mengetik
       setMessages(prevMessages =>
         prevMessages.map(msg =>
           msg.id === lastMessage.id ? { ...msg, isTyping: false } : msg
@@ -89,7 +91,7 @@ export default function AiChatbotPage() {
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       text: userMessageText,
-      displayText: userMessageText, // Teks pengguna langsung tampil penuh
+      displayText: userMessageText,
       sender: "user",
       timestamp: new Date(),
       imagePreview: imagePreview || undefined,
@@ -107,15 +109,14 @@ export default function AiChatbotPage() {
     }
     setIsLoading(true)
 
-    // Placeholder untuk pesan AI yang sedang "mengetik"
     const aiTypingPlaceholderId = `ai-typing-${Date.now()}`;
     const aiTypingPlaceholder: Message = {
         id: aiTypingPlaceholderId,
-        text: "", // Teks asli akan diisi nanti
-        displayText: "", // Mulai kosong untuk efek ketik
+        text: "", 
+        displayText: "",
         sender: "ai",
         timestamp: new Date(),
-        isTyping: true, // Tandai bahwa ini sedang proses "mengetik"
+        isTyping: true, 
     };
     setMessages(prevMessages => [...prevMessages, aiTypingPlaceholder]);
 
@@ -153,19 +154,16 @@ export default function AiChatbotPage() {
       
       const responseData = JSON.parse(responseText);
       
-      // Update placeholder dengan pesan AI yang sebenarnya
       setMessages(prevMessages => prevMessages.map(msg => 
         msg.id === aiTypingPlaceholderId ? {
           ...msg,
-          id: responseData.id || aiTypingPlaceholderId, // Gunakan ID dari server jika ada
+          id: responseData.id || aiTypingPlaceholderId,
           text: responseData.text || "Tidak ada respons teks dari AI.",
-          // displayText akan diupdate oleh useEffect typing
           imageUrl: responseData.imageUrl,
           timestamp: new Date(responseData.timestamp || Date.now()),
-          isTyping: true, // Biarkan true agar efek ketik dimulai
+          isTyping: true, 
         } : msg
       ));
-
 
     } catch (error: any) {
       toast({
@@ -174,7 +172,6 @@ export default function AiChatbotPage() {
         variant: "destructive",
       });
       
-      // Update placeholder menjadi pesan error
        setMessages(prevMessages => prevMessages.map(msg =>
         msg.id === aiTypingPlaceholderId ? {
             ...msg,
@@ -185,7 +182,7 @@ export default function AiChatbotPage() {
         } : msg
       ));
     } finally {
-      setIsLoading(false); // Loading UI dihentikan setelah respons (sukses/gagal) diterima
+      setIsLoading(false);
     }
   };
 
@@ -232,7 +229,7 @@ export default function AiChatbotPage() {
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-gray-900 dark:via-slate-900 dark:to-neutral-900">
       <Header />
-      <main className="flex-1 container mx-auto py-6 flex flex-col max-w-3xl">
+      <main className="flex-1 container mx-auto py-6 flex flex-col max-w-3xl"> {/* max-w-3xl untuk membatasi lebar chat area */}
         <div className="flex items-center mb-6">
           <Button variant="ghost" onClick={() => router.push("/")} className="mr-2 hover:bg-green-100 dark:hover:bg-green-800/50 rounded-full p-2">
             <ArrowLeft className="h-5 w-5 text-green-700 dark:text-green-400" />
@@ -244,15 +241,16 @@ export default function AiChatbotPage() {
         </div>
 
         <Card className="flex-1 flex flex-col overflow-hidden shadow-xl rounded-xl border-gray-200 dark:border-gray-700/80 bg-white/80 dark:bg-gray-800/70 backdrop-blur-md">
-          {/* Increased vertical spacing between messages using space-y-6 */}
-          <ScrollArea className="flex-1 p-4 sm:p-6 space-y-6"> 
+          {/* ScrollArea dengan min-h-0 untuk memastikan scrolling internal */}
+          <ScrollArea className="flex-1 min-h-0 p-4 sm:p-6 space-y-4"> {/* space-y-4 untuk jarak antar blok pesan */}
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex items-end gap-2.5 ${msg.sender === "user" ? "justify-end" : ""}`}
+                // Menambahkan margin bottom untuk pemisahan antar blok pesan yang lebih jelas
+                className={`flex items-end gap-2.5 mb-3 ${msg.sender === "user" ? "justify-end" : ""}`} 
               >
                 {msg.sender === "ai" && (
-                  <Avatar className="h-9 w-9 shadow-sm self-end">
+                  <Avatar className="h-9 w-9 shadow-sm self-end"> {/* self-end agar avatar align dengan bottom bubble */}
                     <AvatarImage src={aiAvatarUrl} alt="BenihKu AI Avatar" /> 
                     <AvatarFallback className="bg-green-500 text-white">
                         <Sparkles className="h-5 w-5"/>
@@ -262,8 +260,7 @@ export default function AiChatbotPage() {
                 <div
                   className={`max-w-[75%] p-3 rounded-xl shadow-md text-sm break-words ${ 
                     msg.sender === "user"
-                      // Darker green for user bubble
-                      ? "bg-green-700 text-white rounded-br-none dark:bg-green-600" 
+                      ? "bg-green-700 text-white rounded-br-none dark:bg-green-600" // Warna bubble pengguna yang lebih gelap
                       : (msg.error 
                           ? "bg-red-100 dark:bg-red-800/60 text-red-700 dark:text-red-300 rounded-bl-none border border-red-200 dark:border-red-700" 
                           : "bg-gray-100 dark:bg-gray-700/80 text-gray-800 dark:text-gray-100 rounded-bl-none border border-gray-200 dark:border-gray-600/50")
@@ -276,12 +273,12 @@ export default function AiChatbotPage() {
                   )}
                   <p className="whitespace-pre-wrap leading-relaxed">
                     {msg.sender === "ai" && msg.isTyping && msg.displayText === "" && !msg.text ? (
-                         <div className="flex items-center space-x-1.5 py-1">
+                         <div className="flex items-center space-x-1.5 py-1"> {/* Animasi titik ketik */}
                             <span className="h-1.5 w-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-75"></span>
                             <span className="h-1.5 w-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-150"></span>
                             <span className="h-1.5 w-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-200"></span>
                         </div>
-                    ) : (msg.displayText || msg.text)}
+                    ) : (msg.displayText || msg.text)} {/* Tampilkan displayText (hasil ketik) atau text penuh */}
                   </p>
                   <p className={`text-xs mt-1.5 opacity-80 ${
                       msg.sender === 'user' ? 'text-green-100 dark:text-green-200' 
@@ -293,7 +290,7 @@ export default function AiChatbotPage() {
                   </p>
                 </div>
                  {msg.sender === "user" && (
-                  <Avatar className="h-9 w-9 shadow-sm self-end">
+                  <Avatar className="h-9 w-9 shadow-sm self-end"> {/* self-end agar avatar align dengan bottom bubble */}
                      <AvatarFallback className="bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200">
                         <UserCircle className="h-5 w-5"/>
                     </AvatarFallback>
@@ -302,7 +299,6 @@ export default function AiChatbotPage() {
               </div>
             ))}
             <div ref={messagesEndRef} />
-            {/* Placeholder for AI typing (dots) is now handled inside message rendering */}
           </ScrollArea>
 
           <CardContent className="border-t p-4 dark:border-gray-700/80 bg-white/90 dark:bg-gray-800/80">
