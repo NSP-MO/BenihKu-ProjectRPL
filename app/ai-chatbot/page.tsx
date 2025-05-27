@@ -20,7 +20,7 @@ interface Message {
   timestamp: Date
   imagePreview?: string
   imageUrl?: string
-  error?: string
+  error?: string // Tambahkan properti error opsional
 }
 
 export default function AiChatbotPage() {
@@ -49,18 +49,9 @@ export default function AiChatbotPage() {
   }, [messages])
 
   const handleSendMessage = async () => {
-    const userMessageText = inputMessage.trim();
-    // Izinkan pengiriman pesan kosong jika ada gambar yang diunggah
-    if (userMessageText === "" && !uploadedImage) {
-        toast({
-            title: "Pesan Kosong",
-            description: "Silakan ketik pesan atau unggah gambar.",
-            variant: "default",
-        });
-        return;
-    }
+    if (inputMessage.trim() === "" && !uploadedImage) return
 
-
+    const userMessageText = inputMessage.trim()
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       text: userMessageText,
@@ -70,8 +61,8 @@ export default function AiChatbotPage() {
     }
 
     setMessages((prevMessages) => [...prevMessages, userMessage])
-    const currentInput = inputMessage;
-    const currentImageFile = uploadedImage;
+    const currentInput = inputMessage; // Simpan input sebelum direset
+    const currentImageFile = uploadedImage; // Simpan file gambar sebelum direset
     setInputMessage("")
     setUploadedImage(null)
     setImagePreview(null)
@@ -84,74 +75,63 @@ export default function AiChatbotPage() {
 
     try {
       const formData = new FormData();
-      // Selalu kirim field 'message', bisa string kosong jika hanya gambar
-      formData.append("message", currentInput);
-
-      if (currentImageFile) {
+      formData.append("message", currentInput); // Gunakan currentInput
+      if (currentImageFile) { // Gunakan currentImageFile
         formData.append("image", currentImageFile);
         formData.append("imageName", currentImageFile.name);
         formData.append("imageType", currentImageFile.type);
-        console.log("Frontend: Appending image to FormData:", currentImageFile.name, currentImageFile.type);
-      } else {
-        console.log("Frontend: No image to append.");
       }
 
-
-      console.log("Frontend: Attempting to send request to /api/test-handler with FormData containing (message, image?):");
-      // Log isi FormData (cara sederhana)
-      for (let [key, value] of formData.entries()) {
-        console.log(`Frontend FormData: ${key} = ${value instanceof File ? value.name : value}`);
-      }
-
-      const response = await fetch("/api/test-handler", {
+      console.log("Frontend: Sending request to /api/benihku-ai-service");
+      const response = await fetch("/api/benihku-ai-service", { // URL API Route Baru
         method: "POST",
         body: formData,
       });
 
-      console.log(`Frontend: Raw response status from /api/test-handler: ${response.status}`);
+      console.log(`Frontend: Raw response status: ${response.status}`);
       console.log("Frontend: Raw response headers:", Object.fromEntries(response.headers.entries()));
 
+      let responseData;
       const responseText = await response.text(); // Selalu baca sebagai teks dulu
-      console.log("Frontend: Raw response text from /api/test-handler:", responseText);
+      console.log("Frontend: Raw response text:", responseText);
 
 
       if (!response.ok) {
-        let errorMessageFromServer = `Request to /api/test-handler failed with status ${response.status}.`;
+         // Jika status tidak OK, coba parse sebagai JSON jika content-type mengindikasikan
+         // Jika tidak, gunakan responseText sebagai pesan error
+        let errorMessageFromServer = `Request failed with status ${response.status}.`;
         if (response.headers.get("content-type")?.includes("application/json")) {
             try {
                 const errorJson = JSON.parse(responseText);
                 errorMessageFromServer = errorJson.error || errorJson.text || errorJson.detail || responseText;
-                console.log("Frontend: Parsed error JSON from server:", errorJson);
             } catch (e) {
-                errorMessageFromServer = `Status ${response.status}, non-JSON error: ${responseText.substring(0, 200)}...`;
-                console.error("Frontend: Could not parse error JSON, using raw text:", e);
+                // Biarkan responseText sebagai pesan error jika parsing JSON gagal
+                errorMessageFromServer = responseText.substring(0, 200) + "...";
             }
         } else {
-            errorMessageFromServer = `Status ${response.status}, non-JSON error: ${responseText.substring(0, 200)}...`;
+            errorMessageFromServer = responseText.substring(0, 200) + "...";
         }
         throw new Error(errorMessageFromServer);
       }
 
-      // Jika respons OK, coba parse sebagai JSON
-      let responseData;
       try {
-        responseData = JSON.parse(responseText);
-        console.log("Frontend: Parsed success JSON response from /api/test-handler:", responseData);
+        responseData = JSON.parse(responseText); // Parse teks yang sudah dibaca
+        console.log("Frontend: Parsed JSON response:", responseData);
       } catch (jsonError) {
-        console.error("Frontend: Failed to parse success JSON response from text. Error:", jsonError);
-        throw new Error(`Server returned OK but malformed JSON. Content: ${responseText.substring(0, 200)}...`);
+        console.error("Frontend: Failed to parse JSON response from text. Error:", jsonError);
+        throw new Error(`Server returned malformed JSON. Content: ${responseText.substring(0, 200)}...`);
       }
       
       aiResponseMessage = {
         id: responseData.id || `ai-fallback-${Date.now()}`,
         text: responseData.text || "Tidak ada respons teks dari AI.",
-        sender: "ai", // Harus 'ai'
+        sender: "ai",
         timestamp: new Date(responseData.timestamp || Date.now()),
-        imageUrl: responseData.imageUrl, // Mungkin tidak ada di respons tes minimal
+        imageUrl: responseData.imageUrl,
       };
 
     } catch (error: any) {
-      console.error("Frontend: Error in handleSendMessage (catch block):", error);
+      console.error("Frontend: Error in handleSendMessage:", error);
       toast({
         title: "Koneksi Error",
         description: error.message || "Gagal menghubungi layanan AI.",
@@ -159,8 +139,8 @@ export default function AiChatbotPage() {
       });
       
       aiResponseMessage = {
-        id: `error-frontend-${Date.now()}`,
-        text: `Maaf, terjadi kesalahan di sisi klien: ${error.message || "Tidak dapat memproses permintaan."}`,
+        id: `error-${Date.now()}`,
+        text: `Maaf, terjadi kesalahan: ${error.message || "Tidak dapat memproses permintaan."}`,
         sender: "ai",
         timestamp: new Date(),
         error: error.message,
@@ -173,6 +153,7 @@ export default function AiChatbotPage() {
     }
   };
 
+  // Fungsi handleImageUpload, triggerFileInput, removeImagePreview tetap sama
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
