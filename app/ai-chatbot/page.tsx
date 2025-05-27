@@ -25,8 +25,7 @@ interface Message {
   isTyping?: boolean
 }
 
-// Kecepatan ketik disesuaikan agar lebih cepat
-const TYPING_SPEED = 8; // Milidetik per karakter (sebelumnya 50)
+const TYPING_SPEED = 5; // milisecond for 1 character
 
 export default function AiChatbotPage() {
   const router = useRouter()
@@ -54,7 +53,6 @@ export default function AiChatbotPage() {
   }, [])
 
   useEffect(() => {
-    // Scroll ke bawah ketika ada pesan baru atau teks sedang diketik
     if (messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
@@ -227,10 +225,12 @@ export default function AiChatbotPage() {
   }
 
   return (
+    // Kontainer utama dengan tinggi penuh viewport dan flex column
     <div className="flex flex-col h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-gray-900 dark:via-slate-900 dark:to-neutral-900">
-      <Header />
-      <main className="flex-1 container mx-auto py-6 flex flex-col max-w-3xl"> {/* max-w-3xl untuk membatasi lebar chat area */}
-        <div className="flex items-center mb-6">
+      <Header /> {/* Header dengan tinggi tetap */}
+      {/* Kontainer utama konten, mengambil sisa tinggi dan juga flex column */}
+      <main className="flex-1 container mx-auto py-6 flex flex-col max-w-3xl overflow-hidden">
+        <div className="flex items-center mb-6"> {/* Konten non-scrollable di atas Card */}
           <Button variant="ghost" onClick={() => router.push("/")} className="mr-2 hover:bg-green-100 dark:hover:bg-green-800/50 rounded-full p-2">
             <ArrowLeft className="h-5 w-5 text-green-700 dark:text-green-400" />
           </Button>
@@ -240,17 +240,17 @@ export default function AiChatbotPage() {
           </div>
         </div>
 
+        {/* Card Chat, mengambil sisa tinggi di main dan flex column */}
         <Card className="flex-1 flex flex-col overflow-hidden shadow-xl rounded-xl border-gray-200 dark:border-gray-700/80 bg-white/80 dark:bg-gray-800/70 backdrop-blur-md">
-          {/* ScrollArea dengan min-h-0 untuk memastikan scrolling internal */}
-          <ScrollArea className="flex-1 min-h-0 p-4 sm:p-6 space-y-4"> {/* space-y-4 untuk jarak antar blok pesan */}
+          {/* ScrollArea, mengambil sisa tinggi di Card dan min-h-0 untuk scroll internal */}
+          <ScrollArea className="flex-1 min-h-0 p-4 sm:p-6 space-y-4"> {/* Jarak antar blok pesan */}
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                // Menambahkan margin bottom untuk pemisahan antar blok pesan yang lebih jelas
                 className={`flex items-end gap-2.5 mb-3 ${msg.sender === "user" ? "justify-end" : ""}`} 
               >
                 {msg.sender === "ai" && (
-                  <Avatar className="h-9 w-9 shadow-sm self-end"> {/* self-end agar avatar align dengan bottom bubble */}
+                  <Avatar className="h-9 w-9 shadow-sm self-end">
                     <AvatarImage src={aiAvatarUrl} alt="BenihKu AI Avatar" /> 
                     <AvatarFallback className="bg-green-500 text-white">
                         <Sparkles className="h-5 w-5"/>
@@ -260,7 +260,7 @@ export default function AiChatbotPage() {
                 <div
                   className={`max-w-[75%] p-3 rounded-xl shadow-md text-sm break-words ${ 
                     msg.sender === "user"
-                      ? "bg-green-700 text-white rounded-br-none dark:bg-green-600" // Warna bubble pengguna yang lebih gelap
+                      ? "bg-green-700 text-white rounded-br-none dark:bg-green-600" 
                       : (msg.error 
                           ? "bg-red-100 dark:bg-red-800/60 text-red-700 dark:text-red-300 rounded-bl-none border border-red-200 dark:border-red-700" 
                           : "bg-gray-100 dark:bg-gray-700/80 text-gray-800 dark:text-gray-100 rounded-bl-none border border-gray-200 dark:border-gray-600/50")
@@ -273,12 +273,12 @@ export default function AiChatbotPage() {
                   )}
                   <p className="whitespace-pre-wrap leading-relaxed">
                     {msg.sender === "ai" && msg.isTyping && msg.displayText === "" && !msg.text ? (
-                         <div className="flex items-center space-x-1.5 py-1"> {/* Animasi titik ketik */}
+                         <div className="flex items-center space-x-1.5 py-1">
                             <span className="h-1.5 w-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-75"></span>
                             <span className="h-1.5 w-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-150"></span>
                             <span className="h-1.5 w-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-200"></span>
                         </div>
-                    ) : (msg.displayText || msg.text)} {/* Tampilkan displayText (hasil ketik) atau text penuh */}
+                    ) : (msg.displayText || msg.text)}
                   </p>
                   <p className={`text-xs mt-1.5 opacity-80 ${
                       msg.sender === 'user' ? 'text-green-100 dark:text-green-200' 
@@ -290,7 +290,7 @@ export default function AiChatbotPage() {
                   </p>
                 </div>
                  {msg.sender === "user" && (
-                  <Avatar className="h-9 w-9 shadow-sm self-end"> {/* self-end agar avatar align dengan bottom bubble */}
+                  <Avatar className="h-9 w-9 shadow-sm self-end">
                      <AvatarFallback className="bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200">
                         <UserCircle className="h-5 w-5"/>
                     </AvatarFallback>
@@ -301,6 +301,7 @@ export default function AiChatbotPage() {
             <div ref={messagesEndRef} />
           </ScrollArea>
 
+            {/* Input Area, tinggi sesuai konten */}
           <CardContent className="border-t p-4 dark:border-gray-700/80 bg-white/90 dark:bg-gray-800/80">
             {imagePreview && (
               <div className="mb-3 flex items-center gap-2 p-2.5 border border-gray-200 dark:border-gray-600/50 rounded-lg bg-gray-50 dark:bg-gray-700/30 shadow-sm">
