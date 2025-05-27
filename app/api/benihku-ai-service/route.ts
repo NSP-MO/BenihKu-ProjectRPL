@@ -1,12 +1,12 @@
 // app/api/benihku-ai-service/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Part } from "@google/generative-ai"; // Tambahkan Part
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Part, ChatSession } from "@google/generative-ai";
 import { supabase } from "@/lib/supabase";
 
 const MODEL_NAME = "gemini-1.5-flash-latest";
 const API_KEY = "AIzaSyBDcloTUn38rUFaxqVcL8NKoVpprAlUyN0"; // KUNCI API DISEMATKAN LANGSUNG
 
-async function fileToGenerativePart(file: File): Promise<Part> { // Pastikan return type adalah Part
+async function fileToGenerativePart(file: File): Promise<Part> {
   const base64EncodedData = Buffer.from(await file.arrayBuffer()).toString("base64");
   return {
     inlineData: {
@@ -45,8 +45,6 @@ export async function POST(request: NextRequest) {
      }, { status: 500 });
   }
 
-  const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-
   const generationConfig = {
     temperature: 0.8,
     topK: 64,
@@ -65,33 +63,50 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const userMessage = formData.get("message") as string | null;
     const imageFile = formData.get("image") as File | null;
+    const historyJson = formData.get("history") as string | null; // Expect history as JSON string
 
-    console.log("BENIHKU AI SERVICE API: FormData parsed. Message:", userMessage, "ImageName:", imageFile?.name);
+    let conversationHistory: Array<{ role: "user" | "model"; parts: Part[] }> = [];
+    if (historyJson) {
+      try {
+        const parsedHistory = JSON.parse(historyJson);
+        if (Array.isArray(parsedHistory)) {
+          // Convert to the format expected by Gemini
+          conversationHistory = parsedHistory.map((msg: { sender: 'user' | 'ai'; text: string; imageUrl?: string }) => ({
+            role: msg.sender === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.text }], // Simplified: assumes text parts for history for now. Image handling in history can be complex.
+          }));
+        }
+      } catch (e) {
+        console.warn("BENIHKU AI SERVICE API: Could not parse conversation history JSON.", e);
+      }
+    }
 
-    // Inisialisasi promptParts sebagai array Part
-    let promptParts: Part[] = [];
+
+    console.log("BENIHKU AI SERVICE API: FormData parsed. Message:", userMessage, "ImageName:", imageFile?.name, "History items:", conversationHistory.length);
+
+    let currentUserParts: Part[] = [];
     let systemInstructionText = `Anda adalah BenihKu AI, asisten virtual untuk toko tanaman BenihKu.
     Anda ramah, membantu, dan berpengetahuan tentang tanaman.
     Tujuan Anda adalah membantu pengguna dengan pertanyaan tentang produk tanaman, stok, cara perawatan, dan memberikan rekomendasi.
+    Gunakan riwayat percakapan (jika ada) untuk memahami konteks pertanyaan lanjutan, termasuk kata ganti dan referensi ke topik sebelumnya.
     Jika pengguna mengunggah gambar, coba identifikasi tanaman dalam gambar tersebut dan berikan informasi yang relevan jika memungkinkan.
     Jika pertanyaan di luar topik tanaman atau BenihKu, tolak dengan sopan.
     Selalu jawab dalam Bahasa Indonesia.`;
 
     if (imageFile) {
       const imagePart = await fileToGenerativePart(imageFile);
-      promptParts.push(imagePart);
+      currentUserParts.push(imagePart);
       systemInstructionText += "\nPengguna telah mengunggah gambar. Fokus pada gambar tersebut jika ada pertanyaan terkait.";
       if (userMessage && userMessage.trim() !== "") {
-        promptParts.push({ text: `\nPertanyaan terkait gambar: ${userMessage}` });
+        currentUserParts.push({ text: `\nPertanyaan terkait gambar: ${userMessage}` });
       } else {
-        // Jika hanya gambar tanpa teks, minta AI untuk mendeskripsikan
-        promptParts.push({ text: "\nDeskripsikan tanaman pada gambar ini dan berikan informasi perawatannya jika Anda tahu." });
+        currentUserParts.push({ text: "\nDeskripsikan tanaman pada gambar ini dan berikan informasi perawatannya jika Anda tahu." });
       }
     } else if (userMessage && userMessage.trim() !== "") {
-      promptParts.push({ text: userMessage }); // Bungkus teks dengan objek Part
+      currentUserParts.push({ text: userMessage });
       const lowerMessage = userMessage.toLowerCase();
 
-      // Logika untuk menambahkan konteks dari Supabase
+      // Contextual data fetching from Supabase (existing logic)
       if (lowerMessage.includes("stok") || lowerMessage.includes("tersedia")) {
         const productNameMatch = lowerMessage.match(/(?:stok|tersedia)\s*(?:untuk|dari|produk)?\s*([^?.\n]+)/i);
         const productName = productNameMatch?.[1]?.trim();
@@ -109,12 +124,12 @@ export async function POST(request: NextRequest) {
             products.forEach(p => {
               productInfo += `\n- ${p.name} (Kategori: ${p.category}, Harga: Rp ${p.price.toLocaleString('id-ID')}, Stok: ${p.stock > 0 ? p.stock : 'Habis'}). Deskripsi singkat: ${p.description.substring(0, 50)}...`;
             });
-            promptParts.push({ text: productInfo });
+            currentUserParts.push({ text: productInfo });
           } else {
-            promptParts.push({ text: `\n[Info Tambahan: Tidak ditemukan produk yang cocok atau tersedia untuk "${productName}" di database BenihKu.]`});
+            currentUserParts.push({ text: `\n[Info Tambahan: Tidak ditemukan produk yang cocok atau tersedia untuk "${productName}" di database BenihKu.]`});
           }
         } else {
-            promptParts.push({ text: "\n[Info Tambahan: Pengguna menanyakan stok secara umum atau nama produk tidak jelas. Minta pengguna untuk menyebutkan nama produk spesifik.]"});
+            currentUserParts.push({ text: "\n[Info Tambahan: Pengguna menanyakan stok secara umum atau nama produk tidak jelas. Minta pengguna untuk menyebutkan nama produk spesifik.]"});
         }
       }
       else if (lowerMessage.includes("rawat") || lowerMessage.includes("perawatan")) {
@@ -138,12 +153,12 @@ export async function POST(request: NextRequest) {
                 careInfo += ` ${JSON.stringify(careData)}.`;
               } else careInfo += " Informasi perawatan spesifik belum tersedia.";
               if(productCare[0].description) careInfo += ` Deskripsi: ${productCare[0].description.substring(0,100)}...`;
-              promptParts.push({ text: careInfo });
+              currentUserParts.push({ text: careInfo });
             } else {
-              promptParts.push({ text: `\n[Info Tambahan: Tidak ditemukan info perawatan spesifik untuk "${plantName}" di database BenihKu.]`});
+              currentUserParts.push({ text: `\n[Info Tambahan: Tidak ditemukan info perawatan spesifik untuk "${plantName}" di database BenihKu.]`});
             }
          } else {
-            promptParts.push({ text: "\n[Info Tambahan: Pengguna menanyakan perawatan secara umum atau nama tanaman tidak jelas.]"});
+            currentUserParts.push({ text: "\n[Info Tambahan: Pengguna menanyakan perawatan secara umum atau nama tanaman tidak jelas.]"});
          }
       }
        else if (lowerMessage.includes("rekomendasi") || lowerMessage.includes("sarankan")) {
@@ -151,32 +166,32 @@ export async function POST(request: NextRequest) {
         const { data: randomProducts, error } = await supabase
             .from('products')
             .select('name, category, description, price')
-            .eq('is_published', true).limit(5).order('created_at', { ascending: false });
+            .eq('is_published', true).limit(5).order('created_at', { ascending: false }); // Ensure created_at exists or use a different order
         if(error) console.error("Supabase query error for recommendations:", error);
         else if (randomProducts && randomProducts.length > 0) {
             let recInfo = "\n[Contoh Produk dari Database BenihKu untuk Inspirasi Rekomendasi]:";
             randomProducts.forEach(p => {
                 recInfo += `\n- ${p.name} (Kategori: ${p.category}, Harga: Rp ${p.price.toLocaleString('id-ID')}). ${p.description.substring(0,50)}...`;
             });
-            promptParts.push({ text: recInfo });
+            currentUserParts.push({ text: recInfo });
         } else {
-          promptParts.push({ text: "\n[Info Tambahan: Saat ini belum ada produk yang bisa direkomendasikan dari database.]"});
+          currentUserParts.push({ text: "\n[Info Tambahan: Saat ini belum ada produk yang bisa direkomendasikan dari database.]"});
         }
       }
     } else {
-      // Jika tidak ada pesan teks maupun gambar yang valid
-      console.log("BENIHKU AI SERVICE API: No valid user message or image file provided.");
-      return NextResponse.json({
-        id: `ai-error-input-${Date.now()}`,
-        text: "Mohon berikan pesan atau unggah gambar untuk memulai percakapan.",
-        sender: "ai",
-        timestamp: new Date().toISOString(),
-      }, { status: 400 });
+      if (currentUserParts.length === 0) {
+        console.log("BENIHKU AI SERVICE API: No valid user message or image file provided.");
+        return NextResponse.json({
+          id: `ai-error-input-${Date.now()}`,
+          text: "Mohon berikan pesan atau unggah gambar untuk memulai percakapan.",
+          sender: "ai",
+          timestamp: new Date().toISOString(),
+        }, { status: 400 });
+      }
     }
 
-    // Pastikan promptParts tidak kosong sebelum mengirim ke Gemini
-    if (promptParts.length === 0) {
-        console.log("BENIHKU AI SERVICE API: promptParts is empty. Cannot call Gemini.");
+    if (currentUserParts.length === 0) {
+        console.log("BENIHKU AI SERVICE API: currentUserParts is empty. Cannot call Gemini.");
         return NextResponse.json({
             id: `ai-error-empty-prompt-${Date.now()}`,
             text: "Tidak ada input yang dapat diproses. Silakan ketik pesan atau unggah gambar.",
@@ -185,13 +200,16 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
     }
 
-    console.log("BENIHKU AI SERVICE API: Sending request to Gemini with promptParts:", JSON.stringify(promptParts.map(p => 'text' in p ? p.text : '[IMAGE_DATA]')));
-    const result = await model.generateContent({
-        contents: [{ role: "user", parts: promptParts }],
+    const model = genAI.getGenerativeModel({ model: MODEL_NAME, systemInstruction: { role: "system", parts: [{text: systemInstructionText}]} });
+    const chat: ChatSession = model.startChat({
+        history: conversationHistory,
         generationConfig,
         safetySettings,
-        systemInstruction: { role: "system", parts: [{text: systemInstructionText}] },
-      });
+    });
+
+    console.log("BENIHKU AI SERVICE API: Sending request to Gemini with current user parts:", JSON.stringify(currentUserParts.map(p => 'text' in p ? p.text : '[IMAGE_DATA]')));
+    const result = await chat.sendMessage(currentUserParts);
+
 
     if (result.response.promptFeedback && result.response.promptFeedback.blockReason) {
         console.error("BENIHKU AI SERVICE API: Gemini API response blocked:", result.response.promptFeedback);
