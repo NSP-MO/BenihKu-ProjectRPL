@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ArrowLeft, Paperclip, Send, CornerDownLeft, UserCircle, Sparkles, Image as ImageIcon, X as XIcon } from "lucide-react" // Pastikan Sparkles ada
+import { ArrowLeft, Paperclip, Send, CornerDownLeft, UserCircle, Sparkles, Image as ImageIcon, X as XIcon } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Header from "@/components/header"
@@ -130,6 +130,15 @@ export default function AiChatbotPage() {
       isTyping: false,
     }
 
+    // Prepare history for API: take all messages except the very first welcome message
+    // And convert them to a simpler format for the API history
+    const historyForApi = messages.slice(1).map(msg => ({
+        sender: msg.sender,
+        text: msg.text, // Send the original full text
+        // imageUrl: msg.imageUrl, // If you need to pass image history too
+    }));
+
+
     setMessages((prevMessages) => [...prevMessages, userMessage])
     const currentInput = inputMessage;
     const currentImageFile = uploadedImage;
@@ -139,17 +148,16 @@ export default function AiChatbotPage() {
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
-    setIsLoading(true) // Ini akan menampilkan loading global jika diperlukan, tapi kita fokus pada placeholder per pesan
+    setIsLoading(true)
 
     const aiTypingPlaceholderId = `ai-typing-${Date.now()}`;
-    // Pesan placeholder AI, displayText akan diisi oleh efek ketik nanti
     const aiTypingPlaceholder: Message = {
         id: aiTypingPlaceholderId,
-        text: "", // Teks asli akan diisi setelah fetch
-        displayText: "", // Mulai kosong untuk efek ketik atau animasi loading
+        text: "",
+        displayText: "",
         sender: "ai",
         timestamp: new Date(),
-        isTyping: true, // Tandai bahwa AI sedang "menyiapkan" jawaban
+        isTyping: true,
     };
     setMessages(prevMessages => [...prevMessages, aiTypingPlaceholder]);
 
@@ -162,13 +170,16 @@ export default function AiChatbotPage() {
         formData.append("imageName", currentImageFile.name);
         formData.append("imageType", currentImageFile.type);
       }
+      // Append history
+      formData.append("history", JSON.stringify(historyForApi));
+
 
       const response = await fetch("/api/benihku-ai-service", {
         method: "POST",
         body: formData,
       });
 
-      const responseText = await response.text(); 
+      const responseText = await response.text();
 
       if (!response.ok) {
         let errorMessageFromServer = `Request failed with status ${response.status}.`;
@@ -184,20 +195,17 @@ export default function AiChatbotPage() {
         }
         throw new Error(errorMessageFromServer);
       }
-      
+     
       const responseData = JSON.parse(responseText);
-      
-      // Update placeholder dengan pesan AI yang sebenarnya
-      // isTyping tetap true agar efek ketik dimulai oleh useEffect
-      setMessages(prevMessages => prevMessages.map(msg => 
+     
+      setMessages(prevMessages => prevMessages.map(msg =>
         msg.id === aiTypingPlaceholderId ? {
           ...msg,
-          id: responseData.id || aiTypingPlaceholderId, // Gunakan ID dari server jika ada
+          id: responseData.id || aiTypingPlaceholderId,
           text: responseData.text || "Tidak ada respons teks dari AI.",
-          // displayText akan diupdate oleh useEffect typing dari "" menjadi text penuh
           imageUrl: responseData.imageUrl,
           timestamp: new Date(responseData.timestamp || Date.now()),
-          isTyping: true, 
+          isTyping: true,
         } : msg
       ));
 
@@ -207,26 +215,25 @@ export default function AiChatbotPage() {
         description: error.message || "Gagal menghubungi layanan AI.",
         variant: "destructive",
       });
-      
-      // Update placeholder menjadi pesan error, dan isTyping false karena tidak ada yang diketik
+     
        setMessages(prevMessages => prevMessages.map(msg =>
         msg.id === aiTypingPlaceholderId ? {
             ...msg,
             text: `Maaf, terjadi kesalahan: ${error.message || "Tidak dapat memproses permintaan."}`,
-            displayText: `Maaf, terjadi kesalahan: ${error.message || "Tidak dapat memproses permintaan."}`, // Tampilkan error langsung
+            displayText: `Maaf, terjadi kesalahan: ${error.message || "Tidak dapat memproses permintaan."}`,
             error: error.message,
-            isTyping: false, // Tidak ada efek ketik untuk error
+            isTyping: false,
         } : msg
       ));
     } finally {
-      setIsLoading(false); // Status loading global dihentikan di sini
+      setIsLoading(false);
     }
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { 
+      if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "Ukuran Gambar Terlalu Besar",
           description: "Mohon unggah gambar dengan ukuran kurang dari 5MB.",
@@ -282,22 +289,22 @@ export default function AiChatbotPage() {
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex items-end gap-2.5 mb-3 ${msg.sender === "user" ? "justify-end" : ""}`} 
+                className={`flex items-end gap-2.5 mb-3 ${msg.sender === "user" ? "justify-end" : ""}`}
               >
                 {msg.sender === "ai" && (
                   <Avatar className="h-9 w-9 shadow-sm self-end">
-                    <AvatarImage src={aiAvatarUrl} alt="BenihKu AI Avatar" /> 
+                    <AvatarImage src={aiAvatarUrl} alt="BenihKu AI Avatar" />
                     <AvatarFallback className="bg-green-500 text-white">
                         <Sparkles className="h-5 w-5"/>
                     </AvatarFallback>
                   </Avatar>
                 )}
                 <div
-                  className={`max-w-[75%] p-3 rounded-xl shadow-md text-sm break-words ${ 
+                  className={`max-w-[75%] p-3 rounded-xl shadow-md text-sm break-words ${
                     msg.sender === "user"
-                      ? "bg-green-700 text-white rounded-br-none dark:bg-green-600" 
-                      : (msg.error 
-                          ? "bg-red-100 dark:bg-red-800/60 text-red-700 dark:text-red-300 rounded-bl-none border border-red-200 dark:border-red-700" 
+                      ? "bg-green-700 text-white rounded-br-none dark:bg-green-600"
+                      : (msg.error
+                          ? "bg-red-100 dark:bg-red-800/60 text-red-700 dark:text-red-300 rounded-bl-none border border-red-200 dark:border-red-700"
                           : "bg-gray-100 dark:bg-gray-700/80 text-gray-800 dark:text-gray-100 rounded-bl-none border border-gray-200 dark:border-gray-600/50")
                   }`}
                 >
@@ -306,10 +313,9 @@ export default function AiChatbotPage() {
                        <Image src={msg.imagePreview} alt="Uploaded preview" width={150} height={150} className="rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm"/>
                     </div>
                   )}
-                  {/* Ganti placeholder loading awal */}
                   {msg.sender === "ai" && msg.isTyping && msg.displayText === "" && !msg.text && !msg.error ? (
                      <div className="flex items-center space-x-2 py-1 text-gray-500 dark:text-gray-400">
-                        <Sparkles className="h-4 w-4 animate-pulse text-yellow-400" /> 
+                        <Sparkles className="h-4 w-4 animate-pulse text-yellow-400" />
                         <span>BenihKu AI sedang berpikir...</span>
                     </div>
                   ) : (
@@ -319,8 +325,8 @@ export default function AiChatbotPage() {
                     />
                   )}
                   <p className={`text-xs mt-1.5 opacity-80 ${
-                      msg.sender === 'user' ? 'text-green-100 dark:text-green-200' 
-                      : msg.error ? 'text-red-500 dark:text-red-400' 
+                      msg.sender === 'user' ? 'text-green-100 dark:text-green-200'
+                      : msg.error ? 'text-red-500 dark:text-red-400'
                       : 'text-gray-500 dark:text-gray-400'
                     }`
                   }>
@@ -385,7 +391,7 @@ export default function AiChatbotPage() {
               </Button>
             </form>
              <p className="text-xs text-muted-foreground mt-2 text-center">
-              Tekan <CornerDownLeft className="inline h-3 w-3" /> untuk mengirim, Shift + <CornerDownLeft className="inline h-3 w-3" /> untuk baris baru.
+              Tekan <CornerDownLeft className="inline h-3 w-3" /> untuk mengirim.
             </p>
           </CardContent>
         </Card>
