@@ -25,7 +25,55 @@ interface Message {
   isTyping?: boolean
 }
 
-const TYPING_SPEED = 2; // milisecond for 1 character
+const TYPING_SPEED = 2; // Kecepatan ketik (ms per karakter)
+
+// Fungsi untuk mem-parsing Markdown sederhana ke HTML
+const parseSimpleMarkdown = (text: string) => {
+  if (!text) return { __html: "" };
+
+  let html = text;
+  // **Bold** -> <strong>Bold</strong>
+  html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+  // *Italic* -> <em>Italic</em> (Contoh tambahan, bisa diaktifkan jika perlu)
+  // html = html.replace(/\*(.*?)\*/g, "<em>$1</em>");
+
+  // Mengganti baris baru dengan <br /> untuk mempertahankan format paragraf dari AI
+  html = html.replace(/\n/g, "<br />");
+
+  // Parsing untuk list sederhana
+  // - Item -> <ul><li>Item</li></ul>
+  // Ini adalah penyederhanaan, untuk list yang lebih kompleks mungkin perlu parser yang lebih canggih
+  if (html.includes("<br />- ") || html.startsWith("- ")) {
+    const lines = html.split("<br />");
+    let inList = false;
+    html = lines.map(line => {
+      if (line.trim().startsWith("- ")) {
+        const listItem = `<li>${line.trim().substring(2)}</li>`;
+        if (!inList) {
+          inList = true;
+          return `<ul>${listItem}`;
+        }
+        return listItem;
+      } else {
+        if (inList) {
+          inList = false;
+          return `</ul>${line}`;
+        }
+        return line;
+      }
+    }).join("<br />");
+    if (inList) { // Menutup <ul> jika elemen terakhir adalah list item
+      html += "</ul>";
+    }
+    // Membersihkan <br /> yang mungkin tidak perlu setelah </ul> atau sebelum <ul>
+    html = html.replace(/<\/ul><br \/>/g, "</ul>");
+    html = html.replace(/<br \/><ul>/g, "<ul>");
+  }
+
+
+  return { __html: html };
+};
+
 
 export default function AiChatbotPage() {
   const router = useRouter()
@@ -40,11 +88,12 @@ export default function AiChatbotPage() {
   const aiAvatarUrl = "https://source.boringavatars.com/beam/120/BenihKuAI?colors=264653,2a9d8f,e9c46a,f4a261,e76f51";
 
   useEffect(() => {
+    const initialMessageText = "Halo! Saya BenihKu AI, asisten virtual Anda untuk semua hal tentang tanaman. Ada yang bisa saya bantu?";
     setMessages([
       {
         id: "welcome-ai",
-        text: "Halo! Saya BenihKu AI, asisten virtual Anda untuk semua hal tentang tanaman. Ada yang bisa saya bantu?",
-        displayText: "Halo! Saya BenihKu AI, asisten virtual Anda untuk semua hal tentang tanaman. Ada yang bisa saya bantu?",
+        text: initialMessageText,
+        displayText: initialMessageText, // Tampil penuh saat awal
         sender: "ai",
         timestamp: new Date(),
         isTyping: false,
@@ -225,12 +274,10 @@ export default function AiChatbotPage() {
   }
 
   return (
-    // Kontainer utama dengan tinggi penuh viewport dan flex column
     <div className="flex flex-col h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-gray-900 dark:via-slate-900 dark:to-neutral-900">
-      <Header /> {/* Header dengan tinggi tetap */}
-      {/* Kontainer utama konten, mengambil sisa tinggi dan juga flex column */}
+      <Header />
       <main className="flex-1 container mx-auto py-6 flex flex-col max-w-3xl overflow-hidden">
-        <div className="flex items-center mb-6"> {/* Konten non-scrollable di atas Card */}
+        <div className="flex items-center mb-6">
           <Button variant="ghost" onClick={() => router.push("/")} className="mr-2 hover:bg-green-100 dark:hover:bg-green-800/50 rounded-full p-2">
             <ArrowLeft className="h-5 w-5 text-green-700 dark:text-green-400" />
           </Button>
@@ -240,10 +287,8 @@ export default function AiChatbotPage() {
           </div>
         </div>
 
-        {/* Card Chat, mengambil sisa tinggi di main dan flex column */}
         <Card className="flex-1 flex flex-col overflow-hidden shadow-xl rounded-xl border-gray-200 dark:border-gray-700/80 bg-white/80 dark:bg-gray-800/70 backdrop-blur-md">
-          {/* ScrollArea, mengambil sisa tinggi di Card dan min-h-0 untuk scroll internal */}
-          <ScrollArea className="flex-1 min-h-0 p-4 sm:p-6 space-y-4"> {/* Jarak antar blok pesan */}
+          <ScrollArea className="flex-1 min-h-0 p-4 sm:p-6 space-y-4">
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -271,15 +316,17 @@ export default function AiChatbotPage() {
                        <Image src={msg.imagePreview} alt="Uploaded preview" width={150} height={150} className="rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm"/>
                     </div>
                   )}
-                  <p className="whitespace-pre-wrap leading-relaxed">
-                    {msg.sender === "ai" && msg.isTyping && msg.displayText === "" && !msg.text ? (
-                         <div className="flex items-center space-x-1.5 py-1">
-                            <span className="h-1.5 w-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-75"></span>
-                            <span className="h-1.5 w-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-150"></span>
-                            <span className="h-1.5 w-1.5 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-200"></span>
-                        </div>
-                    ) : (msg.displayText || msg.text)}
-                  </p>
+                  {/* Menggunakan dangerouslySetInnerHTML untuk merender HTML dari parser */}
+                  <div
+                    className="whitespace-pre-wrap leading-relaxed prose prose-sm dark:prose-invert max-w-full 
+                               prose-strong:font-semibold 
+                               prose-ul:list-disc prose-ul:pl-5 prose-li:my-0.5" // Styling untuk list
+                    dangerouslySetInnerHTML={parseSimpleMarkdown(
+                      msg.sender === "ai" && msg.isTyping && msg.displayText === "" && !msg.text 
+                      ? "..." // Placeholder sederhana saat AI loading awal
+                      : msg.displayText || msg.text || ""
+                    )}
+                  />
                   <p className={`text-xs mt-1.5 opacity-80 ${
                       msg.sender === 'user' ? 'text-green-100 dark:text-green-200' 
                       : msg.error ? 'text-red-500 dark:text-red-400' 
@@ -301,7 +348,6 @@ export default function AiChatbotPage() {
             <div ref={messagesEndRef} />
           </ScrollArea>
 
-            {/* Input Area, tinggi sesuai konten */}
           <CardContent className="border-t p-4 dark:border-gray-700/80 bg-white/90 dark:bg-gray-800/80">
             {imagePreview && (
               <div className="mb-3 flex items-center gap-2 p-2.5 border border-gray-200 dark:border-gray-600/50 rounded-lg bg-gray-50 dark:bg-gray-700/30 shadow-sm">
