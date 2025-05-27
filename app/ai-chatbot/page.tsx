@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { ArrowLeft, Paperclip, Send, CornerDownLeft, Bot, UserCircle, Image as ImageIcon, X as XIcon } from "lucide-react"
+import { ArrowLeft, Paperclip, Send, CornerDownLeft, UserCircle, Image as ImageIcon, X as XIcon, Sparkles } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import Header from "@/components/header"
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "@/components/ui/use-toast"
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface Message {
   id: string
@@ -20,7 +20,7 @@ interface Message {
   timestamp: Date
   imagePreview?: string
   imageUrl?: string
-  error?: string // Tambahkan properti error opsional
+  error?: string
 }
 
 export default function AiChatbotPage() {
@@ -33,11 +33,15 @@ export default function AiChatbotPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  // URL untuk avatar AI baru (contoh)
+  const aiAvatarUrl = "https://source.boringavatars.com/beam/120/AI%20BenihKu?colors=264653,2a9d8f,e9c46a,f4a261,e76f51";
+
+
   useEffect(() => {
     setMessages([
       {
         id: "welcome-ai",
-        text: "Halo! Saya BenihKu AI. Siap membantu Anda!",
+        text: "Halo! Saya BenihKu AI, asisten virtual Anda untuk semua hal tentang tanaman. Ada yang bisa saya bantu?",
         sender: "ai",
         timestamp: new Date(),
       },
@@ -61,8 +65,8 @@ export default function AiChatbotPage() {
     }
 
     setMessages((prevMessages) => [...prevMessages, userMessage])
-    const currentInput = inputMessage; // Simpan input sebelum direset
-    const currentImageFile = uploadedImage; // Simpan file gambar sebelum direset
+    const currentInput = inputMessage;
+    const currentImageFile = uploadedImage;
     setInputMessage("")
     setUploadedImage(null)
     setImagePreview(null)
@@ -75,37 +79,28 @@ export default function AiChatbotPage() {
 
     try {
       const formData = new FormData();
-      formData.append("message", currentInput); // Gunakan currentInput
-      if (currentImageFile) { // Gunakan currentImageFile
+      formData.append("message", currentInput);
+      if (currentImageFile) {
         formData.append("image", currentImageFile);
         formData.append("imageName", currentImageFile.name);
         formData.append("imageType", currentImageFile.type);
       }
 
-      console.log("Frontend: Sending request to /api/benihku-ai-service");
-      const response = await fetch("/api/benihku-ai-service", { // URL API Route Baru
+      const response = await fetch("/api/benihku-ai-service", {
         method: "POST",
         body: formData,
       });
 
-      console.log(`Frontend: Raw response status: ${response.status}`);
-      console.log("Frontend: Raw response headers:", Object.fromEntries(response.headers.entries()));
-
       let responseData;
-      const responseText = await response.text(); // Selalu baca sebagai teks dulu
-      console.log("Frontend: Raw response text:", responseText);
-
+      const responseText = await response.text();
 
       if (!response.ok) {
-         // Jika status tidak OK, coba parse sebagai JSON jika content-type mengindikasikan
-         // Jika tidak, gunakan responseText sebagai pesan error
         let errorMessageFromServer = `Request failed with status ${response.status}.`;
         if (response.headers.get("content-type")?.includes("application/json")) {
             try {
                 const errorJson = JSON.parse(responseText);
                 errorMessageFromServer = errorJson.error || errorJson.text || errorJson.detail || responseText;
             } catch (e) {
-                // Biarkan responseText sebagai pesan error jika parsing JSON gagal
                 errorMessageFromServer = responseText.substring(0, 200) + "...";
             }
         } else {
@@ -115,10 +110,8 @@ export default function AiChatbotPage() {
       }
 
       try {
-        responseData = JSON.parse(responseText); // Parse teks yang sudah dibaca
-        console.log("Frontend: Parsed JSON response:", responseData);
+        responseData = JSON.parse(responseText);
       } catch (jsonError) {
-        console.error("Frontend: Failed to parse JSON response from text. Error:", jsonError);
         throw new Error(`Server returned malformed JSON. Content: ${responseText.substring(0, 200)}...`);
       }
       
@@ -131,7 +124,6 @@ export default function AiChatbotPage() {
       };
 
     } catch (error: any) {
-      console.error("Frontend: Error in handleSendMessage:", error);
       toast({
         title: "Koneksi Error",
         description: error.message || "Gagal menghubungi layanan AI.",
@@ -153,7 +145,6 @@ export default function AiChatbotPage() {
     }
   };
 
-  // Fungsi handleImageUpload, triggerFileInput, removeImagePreview tetap sama
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
@@ -195,83 +186,90 @@ export default function AiChatbotPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-gray-900 dark:via-slate-900 dark:to-neutral-900">
       <Header />
-      <main className="flex-1 container py-6 flex flex-col">
-        <div className="flex items-center mb-4">
-          <Button variant="ghost" onClick={() => router.push("/")} className="mr-2">
-            <ArrowLeft className="h-5 w-5" />
+      <main className="flex-1 container mx-auto py-6 flex flex-col max-w-3xl">
+        <div className="flex items-center mb-6">
+          <Button variant="ghost" onClick={() => router.push("/")} className="mr-2 hover:bg-green-100 dark:hover:bg-green-800/50 rounded-full p-2">
+            <ArrowLeft className="h-5 w-5 text-green-700 dark:text-green-400" />
           </Button>
-          <h1 className="text-2xl font-bold">BenihKu AI</h1>
+          <div className="flex items-center">
+            <Sparkles className="h-7 w-7 text-yellow-400 mr-2" />
+            <h1 className="text-2xl font-bold text-green-800 dark:text-green-300">BenihKu AI</h1>
+          </div>
         </div>
 
-        <Card className="flex-1 flex flex-col overflow-hidden dark:border-gray-700">
-          <ScrollArea className="flex-1 p-4 space-y-4">
+        <Card className="flex-1 flex flex-col overflow-hidden shadow-xl rounded-xl border-gray-200 dark:border-gray-700/80 bg-white/80 dark:bg-gray-800/70 backdrop-blur-md">
+          <ScrollArea className="flex-1 p-4 sm:p-6 space-y-4">
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex items-end gap-2 ${msg.sender === "user" ? "justify-end" : ""}`}
+                className={`flex items-end gap-2.5 ${msg.sender === "user" ? "justify-end" : ""}`}
               >
                 {msg.sender === "ai" && (
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/logo.png" alt="BenihKu AI" /> 
-                    <AvatarFallback><Bot className="h-5 w-5"/></AvatarFallback>
+                  <Avatar className="h-9 w-9 shadow-sm">
+                    <AvatarImage src={aiAvatarUrl} alt="BenihKu AI Avatar" /> 
+                    <AvatarFallback className="bg-green-500 text-white">
+                        <Sparkles className="h-5 w-5"/>
+                    </AvatarFallback>
                   </Avatar>
                 )}
                 <div
-                  className={`max-w-[70%] p-3 rounded-lg shadow-sm ${ 
+                  className={`max-w-[75%] p-3 rounded-xl shadow-md text-sm ${ 
                     msg.sender === "user"
-                      ? "bg-green-600 text-white rounded-br-none"
-                      : (msg.error ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-bl-none" 
-                                   : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-none")
+                      ? "bg-green-600 text-white rounded-br-none dark:bg-green-500"
+                      : (msg.error ? "bg-red-100 dark:bg-red-800/60 text-red-700 dark:text-red-300 rounded-bl-none border border-red-200 dark:border-red-700" 
+                                   : "bg-gray-100 dark:bg-gray-700/80 text-gray-800 dark:text-gray-100 rounded-bl-none border border-gray-200 dark:border-gray-600/50")
                   }`}
                 >
                   {msg.imagePreview && (
                     <div className="mb-2 relative">
-                       <Image src={msg.imagePreview} alt="Uploaded preview" width={150} height={150} className="rounded-md border dark:border-gray-600"/>
+                       <Image src={msg.imagePreview} alt="Uploaded preview" width={150} height={150} className="rounded-lg border border-gray-300 dark:border-gray-600 shadow-sm"/>
                     </div>
                   )}
-                  <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
-                  <p className={`text-xs mt-1 ${
-                      msg.sender === 'user' ? 'text-green-200' 
-                      : msg.error ? 'text-red-400 dark:text-red-400' 
-                      : 'text-gray-400 dark:text-gray-500'
+                  <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                  <p className={`text-xs mt-1.5 opacity-80 ${
+                      msg.sender === 'user' ? 'text-green-100 dark:text-green-200' 
+                      : msg.error ? 'text-red-500 dark:text-red-400' 
+                      : 'text-gray-500 dark:text-gray-400'
                     }`
                   }>
                     {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
                  {msg.sender === "user" && (
-                  <Avatar className="h-8 w-8">
-                     <AvatarFallback><UserCircle className="h-6 w-6"/></AvatarFallback>
+                  <Avatar className="h-9 w-9 shadow-sm">
+                     <AvatarFallback className="bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200">
+                        <UserCircle className="h-5 w-5"/>
+                    </AvatarFallback>
                   </Avatar>
                 )}
               </div>
             ))}
             <div ref={messagesEndRef} />
             {isLoading && (
-                <div className="flex items-end gap-2">
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src="/logo.png" alt="BenihKu AI" />
-                         <AvatarFallback><Bot className="h-5 w-5"/></AvatarFallback>
+                <div className="flex items-end gap-2.5">
+                    <Avatar className="h-9 w-9 shadow-sm">
+                        <AvatarImage src={aiAvatarUrl} alt="BenihKu AI Avatar" />
+                         <AvatarFallback className="bg-green-500 text-white"><Sparkles className="h-5 w-5"/></AvatarFallback>
                     </Avatar>
-                    <div className="max-w-[70%] p-3 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-none shadow-sm">
-                        <div className="flex items-center space-x-1">
-                            <span className="h-2 w-2 bg-gray-400 rounded-full animate-pulse delay-75"></span>
-                            <span className="h-2 w-2 bg-gray-400 rounded-full animate-pulse delay-150"></span>
-                            <span className="h-2 w-2 bg-gray-400 rounded-full animate-pulse delay-200"></span>
+                    <div className="max-w-[70%] p-3 rounded-xl bg-gray-100 dark:bg-gray-700/80 text-gray-800 dark:text-gray-100 rounded-bl-none shadow-md border border-gray-200 dark:border-gray-600/50">
+                        <div className="flex items-center space-x-1.5">
+                            <span className="h-2 w-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-75"></span>
+                            <span className="h-2 w-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-150"></span>
+                            <span className="h-2 w-2 bg-gray-400 dark:bg-gray-500 rounded-full animate-pulse delay-200"></span>
                         </div>
                     </div>
                 </div>
             )}
           </ScrollArea>
 
-          <div className="border-t p-4 dark:border-gray-700 bg-background">
+          <CardContent className="border-t p-4 dark:border-gray-700/80 bg-white/90 dark:bg-gray-800/80">
             {imagePreview && (
-              <div className="mb-2 flex items-center gap-2 p-2 border dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50">
-                <Image src={imagePreview} alt="Preview" width={48} height={48} className="rounded-md border dark:border-gray-500"/>
-                <span className="text-sm text-muted-foreground truncate max-w-xs">{uploadedImage?.name}</span>
-                <Button variant="ghost" size="icon" onClick={removeImagePreview} className="ml-auto text-muted-foreground hover:text-destructive">
+              <div className="mb-3 flex items-center gap-2 p-2.5 border border-gray-200 dark:border-gray-600/50 rounded-lg bg-gray-50 dark:bg-gray-700/30 shadow-sm">
+                <Image src={imagePreview} alt="Preview" width={40} height={40} className="rounded-md border border-gray-300 dark:border-gray-500"/>
+                <span className="text-sm text-muted-foreground truncate max-w-xs flex-1">{uploadedImage?.name}</span>
+                <Button variant="ghost" size="icon" onClick={removeImagePreview} className="ml-auto text-muted-foreground hover:text-destructive h-7 w-7 rounded-full">
                     <XIcon className="h-4 w-4"/>
                 </Button>
               </div>
@@ -290,15 +288,15 @@ export default function AiChatbotPage() {
                 ref={fileInputRef}
                 className="hidden"
               />
-              <Button variant="outline" size="icon" type="button" onClick={triggerFileInput} aria-label="Unggah Gambar" disabled={isLoading} className="dark:border-gray-600">
-                <Paperclip className="h-5 w-5" />
+              <Button variant="outline" size="icon" type="button" onClick={triggerFileInput} aria-label="Unggah Gambar" disabled={isLoading} className="rounded-full h-10 w-10 dark:border-gray-600 hover:bg-green-100 dark:hover:bg-green-700/50 focus-visible:ring-green-500">
+                <Paperclip className="h-5 w-5 text-gray-600 dark:text-gray-300" />
               </Button>
               <Input
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Ketik pesan Anda atau unggah gambar..."
-                className="flex-1 dark:bg-gray-800 dark:border-gray-600"
+                placeholder="Ketik pesan Anda..."
+                className="flex-1 h-10 rounded-full px-4 dark:bg-gray-700 dark:border-gray-600 focus-visible:ring-green-500 placeholder-gray-400 dark:placeholder-gray-500"
                 disabled={isLoading}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -307,14 +305,14 @@ export default function AiChatbotPage() {
                   }
                 }}
               />
-              <Button type="submit" disabled={isLoading || (inputMessage.trim() === "" && !uploadedImage)} className="bg-green-600 hover:bg-green-700">
+              <Button type="submit" disabled={isLoading || (inputMessage.trim() === "" && !uploadedImage)} className="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 rounded-full h-10 w-10 p-0">
                 {isLoading ? <span className="h-5 w-5 animate-spin rounded-full border-2 border-transparent border-t-white border-r-white"></span> : <Send className="h-5 w-5" />}
               </Button>
             </form>
              <p className="text-xs text-muted-foreground mt-2 text-center">
               Tekan <CornerDownLeft className="inline h-3 w-3" /> untuk mengirim, Shift + <CornerDownLeft className="inline h-3 w-3" /> untuk baris baru.
             </p>
-          </div>
+          </CardContent>
         </Card>
       </main>
     </div>
