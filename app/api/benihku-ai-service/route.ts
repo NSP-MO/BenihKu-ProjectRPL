@@ -227,12 +227,20 @@ export async function POST(request: NextRequest) {
         errorMessage = error;
     }
 
+    // Check if the error is from the Gemini API itself (e.g., API key issue not caught by init)
+    if (error.toString().includes("API key not valid")) {
+        errorMessage = "Kunci API untuk layanan AI tidak valid atau bermasalah. Harap periksa konfigurasi server.";
+    }
+
+
     return NextResponse.json({
         id: `ai-critical-error-${Date.now()}`,
-        text: `Error: ${errorMessage}`,
+        text: `Error: ${errorMessage}`, // This will be the "Internal server error..." part the frontend sees
         sender: "ai",
         timestamp: new Date().toISOString(),
-     }, { status: 500 });
+        // Optionally, include more detailed error info for server logs if needed, but not to the client
+        // serverErrorDetail: error.stack, 
+     }, { status: 500 }); // Ensure a 500 status for internal errors
   }
 }
 
