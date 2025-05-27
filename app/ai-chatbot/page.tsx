@@ -310,7 +310,7 @@ export default function AiChatbotPage() {
                   {msg.sender === "ai" && msg.isTyping && msg.displayText === "" && !msg.text && !msg.error ? (
                      <div className="flex items-center space-x-2 py-1 text-gray-500 dark:text-gray-400">
                         <Sparkles className="h-4 w-4 animate-pulse text-yellow-400" /> 
-                        <span>BenihKu AI sedang mengetik...</span>
+                        <span>BenihKu AI sedang berpikir...</span>
                     </div>
                   ) : (
                     <div
