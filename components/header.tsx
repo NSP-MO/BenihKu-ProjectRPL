@@ -1,7 +1,8 @@
+// components/header.tsx
 "use client"
 
 import Link from "next/link"
-import { Leaf, LogOut, ShoppingCart, Menu, Loader2 } from "lucide-react"
+import { Leaf, LogOut, ShoppingCart, Menu, Loader2, Sparkles } from "lucide-react" // Tambahkan Sparkles
 import { useAuth } from "@/contexts/auth-context"
 import { useCart } from "@/contexts/cart-context"
 import { Button } from "@/components/ui/button"
@@ -23,23 +24,19 @@ export default function Header() {
   const { user, logout } = useAuth()
   const { totalItems, isLoading: cartLoading } = useCart()
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-  const [avatarKey, setAvatarKey] = useState<number>(0) // Add a key to force re-render
+  const [avatarKey, setAvatarKey] = useState<number>(0)
 
-  // Fetch the latest avatar URL from the profile
   useEffect(() => {
     const fetchAvatar = async () => {
       if (!user || !user.id) {
-        console.log("User or user ID is not available yet")
         return
       }
 
       try {
-        // First check user metadata
         if (user.user_metadata?.avatar_url) {
           setAvatarUrl(user.user_metadata.avatar_url)
         }
 
-        // Then check profile table for most up-to-date avatar
         const { data, error } = await supabase.from("profiles").select("avatar_url").eq("id", user.id).single()
 
         if (error) {
@@ -59,11 +56,10 @@ export default function Header() {
       fetchAvatar()
     }
 
-    // Set up a listener for auth state changes to refresh avatar
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
       if (event === "USER_UPDATED") {
         fetchAvatar()
-        setAvatarKey((prev) => prev + 1) // Force re-render of avatar
+        setAvatarKey((prev) => prev + 1)
       }
     })
 
@@ -82,8 +78,9 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <nav className="ml-auto hidden md:flex gap-6">
-          <Link href="/" className="text-sm font-medium transition-colors hover:text-green-600">
-            Beranda
+          {/* Ubah link Beranda menjadi BenihKu AI */}
+          <Link href="/ai-chatbot" className="text-sm font-medium transition-colors hover:text-green-600 flex items-center">
+            <Sparkles className="mr-1 h-4 w-4 text-yellow-400" /> BenihKu AI
           </Link>
           <Link href="/categories" className="text-sm font-medium transition-colors hover:text-green-600">
             Kategori
@@ -124,8 +121,8 @@ export default function Header() {
                     {avatarUrl ? (
                       <div className="h-8 w-8 rounded-full overflow-hidden">
                         <img
-                          key={avatarKey} // Add key to force re-render when avatar changes
-                          src={`${avatarUrl}?t=${Date.now()}`} // Add timestamp to prevent caching
+                          key={avatarKey}
+                          src={`${avatarUrl}?t=${Date.now()}`}
                           alt="Profile"
                           className="h-full w-full object-cover"
                           crossOrigin="anonymous"
@@ -201,8 +198,9 @@ export default function Header() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[250px] sm:w-[300px]">
               <nav className="flex flex-col gap-4 mt-8">
-                <Link href="/" className="text-base font-medium">
-                  Beranda
+                {/* Ubah link Beranda menjadi BenihKu AI untuk mobile */}
+                <Link href="/ai-chatbot" className="text-base font-medium flex items-center">
+                   <Sparkles className="mr-2 h-5 w-5 text-yellow-400" /> BenihKu AI
                 </Link>
                 <Link href="/categories" className="text-base font-medium">
                   Kategori
