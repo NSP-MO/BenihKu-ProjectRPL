@@ -1,12 +1,12 @@
 // app/api/benihku-ai-service/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Part } from "@google/generative-ai";
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Part } from "@google/generative-ai"; // Tambahkan Part
 import { supabase } from "@/lib/supabase";
 
 const MODEL_NAME = "gemini-1.5-flash-latest";
 const API_KEY = "AIzaSyBDcloTUn38rUFaxqVcL8NKoVpprAlUyN0"; // KUNCI API DISEMATKAN LANGSUNG
 
-async function fileToGenerativePart(file: File): Promise<Part> {
+async function fileToGenerativePart(file: File): Promise<Part> { // Pastikan return type adalah Part
   const base64EncodedData = Buffer.from(await file.arrayBuffer()).toString("base64");
   return {
     inlineData: {
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
         id: `ai-init-error-${Date.now()}`,
         error: "Gagal menginisialisasi layanan AI.",
         detail: initError.message || "Kunci API mungkin tidak valid atau ada masalah jaringan.",
-        text: `Error (init): ${initError.message || "Tidak dapat menginisialisasi layanan AI."}`,
+        text: `Error: ${initError.message || "Tidak dapat menginisialisasi layanan AI."}`,
         sender: "ai",
         timestamp: new Date().toISOString(),
      }, { status: 500 });
@@ -66,8 +66,9 @@ export async function POST(request: NextRequest) {
     const userMessage = formData.get("message") as string | null;
     const imageFile = formData.get("image") as File | null;
 
-    console.log("BENIHKU AI SERVICE API: FormData parsed. Message:", userMessage ? userMessage.substring(0, 50) + "..." : null, "ImageName:", imageFile?.name);
+    console.log("BENIHKU AI SERVICE API: FormData parsed. Message:", userMessage, "ImageName:", imageFile?.name);
 
+    // Inisialisasi promptParts sebagai array Part
     let promptParts: Part[] = [];
     let systemInstructionText = `Anda adalah BenihKu AI, asisten virtual untuk toko tanaman BenihKu.
     Anda ramah, membantu, dan berpengetahuan tentang tanaman.
@@ -83,12 +84,14 @@ export async function POST(request: NextRequest) {
       if (userMessage && userMessage.trim() !== "") {
         promptParts.push({ text: `\nPertanyaan terkait gambar: ${userMessage}` });
       } else {
+        // Jika hanya gambar tanpa teks, minta AI untuk mendeskripsikan
         promptParts.push({ text: "\nDeskripsikan tanaman pada gambar ini dan berikan informasi perawatannya jika Anda tahu." });
       }
     } else if (userMessage && userMessage.trim() !== "") {
-      promptParts.push({ text: userMessage });
+      promptParts.push({ text: userMessage }); // Bungkus teks dengan objek Part
       const lowerMessage = userMessage.toLowerCase();
 
+      // Logika untuk menambahkan konteks dari Supabase
       if (lowerMessage.includes("stok") || lowerMessage.includes("tersedia")) {
         const productNameMatch = lowerMessage.match(/(?:stok|tersedia)\s*(?:untuk|dari|produk)?\s*([^?.\n]+)/i);
         const productName = productNameMatch?.[1]?.trim();
@@ -126,7 +129,7 @@ export async function POST(request: NextRequest) {
               .eq('is_published', true)
               .limit(1);
             if (error) console.error("Supabase query error for care:", error);
-            else if (productCare && productCare.length > 0 && productCare[0]) { // Added null check for productCare[0]
+            else if (productCare && productCare.length > 0) {
               let careInfo = `\n[Info Perawatan dari Database untuk ${productCare[0].name}]:`;
               if (productCare[0].care_instructions) {
                 const careData = typeof productCare[0].care_instructions === 'string'
@@ -161,6 +164,7 @@ export async function POST(request: NextRequest) {
         }
       }
     } else {
+      // Jika tidak ada pesan teks maupun gambar yang valid
       console.log("BENIHKU AI SERVICE API: No valid user message or image file provided.");
       return NextResponse.json({
         id: `ai-error-input-${Date.now()}`,
@@ -170,6 +174,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Pastikan promptParts tidak kosong sebelum mengirim ke Gemini
     if (promptParts.length === 0) {
         console.log("BENIHKU AI SERVICE API: promptParts is empty. Cannot call Gemini.");
         return NextResponse.json({
@@ -180,7 +185,7 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
     }
 
-    console.log("BENIHKU AI SERVICE API: Sending request to Gemini...");
+    console.log("BENIHKU AI SERVICE API: Sending request to Gemini with promptParts:", JSON.stringify(promptParts.map(p => 'text' in p ? p.text : '[IMAGE_DATA]')));
     const result = await model.generateContent({
         contents: [{ role: "user", parts: promptParts }],
         generationConfig,
@@ -204,7 +209,7 @@ export async function POST(request: NextRequest) {
     }
 
     const responseText = result.response.text();
-    console.log("BENIHKU AI SERVICE API: Received response from Gemini:", responseText.substring(0,100) + "...");
+    console.log("BENIHKU AI SERVICE API: Received response from Gemini:", responseText);
 
     return NextResponse.json({
       id: `ai-response-${Date.now()}`,
@@ -214,26 +219,17 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error("BENIHKU AI SERVICE API: Unhandled error in POST handler:", error, error.stack);
+    console.error("BENIHKU AI SERVICE API: Unhandled error in POST handler:", error);
     let errorMessage = "Terjadi kesalahan internal pada server AI kami. Mohon coba lagi nanti.";
-    
     if (error.message) {
         errorMessage = error.message;
     } else if (typeof error === 'string') {
         errorMessage = error;
     }
-    
-    if (error.toString().toLowerCase().includes("api key not valid") || error.toString().toLowerCase().includes("invalid api key")) {
-        errorMessage = "Kunci API untuk layanan AI tidak valid atau bermasalah. Harap periksa konfigurasi server.";
-        console.error("BENIHKU AI SERVICE API: Critical API Key issue detected.");
-    }
-
 
     return NextResponse.json({
         id: `ai-critical-error-${Date.now()}`,
-        error: "Internal Server Error", // Generic error for client
-        detail: errorMessage, // More specific detail for client if needed, or keep it server-side
-        text: `Error: ${errorMessage}`, // This is what will be shown in the chat bubble
+        text: `Error: ${errorMessage}`,
         sender: "ai",
         timestamp: new Date().toISOString(),
      }, { status: 500 });
