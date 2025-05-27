@@ -25,7 +25,7 @@ interface Message {
   isTyping?: boolean
 }
 
-const TYPING_SPEED = 1; // milisecond for 1 character
+const TYPING_SPEED = 2; // milisecond for 1 character
 
 export default function AiChatbotPage() {
   const router = useRouter()
