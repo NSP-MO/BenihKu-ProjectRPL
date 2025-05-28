@@ -25,7 +25,7 @@ interface Message {
   isTyping?: boolean
 }
 
-const TYPING_SPEED = 1.7;
+const TYPING_SPEED = 2; // ms
 
 const parseSimpleMarkdown = (text: string) => {
   if (!text) return { __html: "" };
