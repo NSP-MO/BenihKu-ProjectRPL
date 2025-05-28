@@ -25,7 +25,7 @@ interface Message {
   isTyping?: boolean
 }
 
-const TYPING_SPEED = 2;
+const TYPING_SPEED = 2; // ms
 
 const parseSimpleMarkdown = (text: string) => {
   if (!text) return { __html: "" };
@@ -391,7 +391,7 @@ export default function AiChatbotPage() {
               </Button>
             </form>
              <p className="text-xs text-muted-foreground mt-2 text-center">
-              Tekan <CornerDownLeft className="inline h-3 w-3" /> untuk mengirim.
+              Tekan <CornerDownLeft className="inline h-3 w-3" /> untuk mengirim
             </p>
           </CardContent>
         </Card>
