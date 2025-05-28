@@ -391,7 +391,7 @@ export default function AiChatbotPage() {
               </Button>
             </form>
              <p className="text-xs text-muted-foreground mt-2 text-center">
-              Tekan <CornerDownLeft className="inline h-3 w-3" /> untuk mengirim.
+              Tekan <CornerDownLeft className="inline h-3 w-3" /> untuk mengirim
             </p>
           </CardContent>
         </Card>
