@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Part } from "@google/generative-ai"; // Tambahkan Part
 import { supabase } from "@/lib/supabase";
 
-const MODEL_NAME = "gemini-1.5-flash-latest";
+const MODEL_NAME = "gemini-2.0-flash";
 const API_KEY = "AIzaSyBDcloTUn38rUFaxqVcL8NKoVpprAlUyN0"; // KUNCI API DISEMATKAN LANGSUNG
 
 async function fileToGenerativePart(file: File): Promise<Part> { // Pastikan return type adalah Part
