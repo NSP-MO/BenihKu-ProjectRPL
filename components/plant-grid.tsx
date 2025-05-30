@@ -7,14 +7,15 @@ import Image from "next/image"
 import { Loader2 } from "lucide-react"
 
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { getProducts, getPopularProducts, type Product } from "@/lib/products" // getPopularProducts no longer takes a limit
-import { Badge } from "@/components/ui/badge" // Import Badge
+import { getProducts, getPopularProducts, type Product, type ProductTypeFilter } from "@/lib/products"
+import { Badge } from "@/components/ui/badge"
 
 interface PlantGridProps {
   showPopular?: boolean;
+  productTypeFilter?: ProductTypeFilter; // Tambahkan prop baru
 }
 
-export default function PlantGrid({ showPopular = false }: PlantGridProps) {
+export default function PlantGrid({ showPopular = false, productTypeFilter = 'all' }: PlantGridProps) {
   const [plants, setPlants] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -22,8 +23,9 @@ export default function PlantGrid({ showPopular = false }: PlantGridProps) {
     async function loadPlants() {
       setLoading(true);
       try {
-        // getPopularProducts now fetches its own limit from settings
-        const data = showPopular ? await getPopularProducts() : await getProducts();
+        const data = showPopular 
+          ? await getPopularProducts(productTypeFilter) 
+          : await getProducts(productTypeFilter);
         setPlants(data)
       } catch (error) {
         console.error("Error loading plants:", error)
@@ -34,7 +36,7 @@ export default function PlantGrid({ showPopular = false }: PlantGridProps) {
     }
 
     loadPlants()
-  }, [showPopular])
+  }, [showPopular, productTypeFilter]) // Tambahkan productTypeFilter ke dependency array
 
   if (loading) {
     return (
@@ -48,7 +50,7 @@ export default function PlantGrid({ showPopular = false }: PlantGridProps) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">
-          {showPopular ? "Tidak ada tanaman populer yang ditampilkan saat ini." : "Tidak ada tanaman yang tersedia saat ini."}
+          {showPopular ? "Tidak ada produk populer yang ditampilkan saat ini untuk filter ini." : "Tidak ada produk yang tersedia untuk filter ini."}
         </p>
       </div>
     )
@@ -67,10 +69,13 @@ export default function PlantGrid({ showPopular = false }: PlantGridProps) {
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
-              {plant.is_popular && (
+              {plant.is_popular && plant.category !== "Benih" && ( // Hanya tampilkan "Populer" jika bukan benih (opsional)
                 <div className="absolute top-2 right-2 bg-green-600 text-white text-xs px-2 py-1 rounded-full z-10">
                   Populer
                 </div>
+              )}
+               {plant.is_popular && plant.category === "Benih" && (
+                <Badge className="absolute top-2 right-2 bg-blue-600 text-white text-xs z-10" variant="default">Benih Populer</Badge>
               )}
               {plant.is_published === false && (
                 <Badge
