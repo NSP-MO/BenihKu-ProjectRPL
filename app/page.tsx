@@ -1,11 +1,18 @@
+// app/page.tsx
+"use client" // Tambahkan ini jika belum ada
+
 import Link from "next/link"
-import { Leaf } from "lucide-react"
+import { Leaf, Sprout, LayoutGrid } from "lucide-react" // Tambahkan Sprout dan LayoutGrid
+import { useState } from "react" // Import useState
 
 import { Button } from "@/components/ui/button"
 import PlantGrid from "@/components/plant-grid"
 import Header from "@/components/header"
+import type { ProductTypeFilter } from "@/lib/products" // Import tipe
 
 export default function Home() {
+  const [productFilter, setProductFilter] = useState<ProductTypeFilter>('all'); // State untuk filter
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
@@ -16,10 +23,10 @@ export default function Home() {
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                  Temukan Tanaman Impian Anda
+                  Temukan Tanaman & Benih Impian Anda
                 </h1>
                 <p className="mx-auto max-w-[700px] text-gray-500 dark:text-gray-400 md:text-xl">
-                  Koleksi tanaman hias dan tanaman indoor berkualitas tinggi untuk mempercantik ruangan Anda.
+                  Koleksi tanaman hias, tanaman indoor, dan benih berkualitas tinggi untuk kebun Anda.
                 </p>
               </div>
               <div className="flex flex-col gap-2 min-[400px]:flex-row">
@@ -43,13 +50,39 @@ export default function Home() {
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Tanaman Populer</h2>
+                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Produk Populer</h2>
                 <p className="mx-auto max-w-[700px] text-gray-500 dark:text-gray-400 md:text-xl">
-                  Tanaman yang paling banyak dicari oleh pelanggan kami.
+                  Produk yang paling banyak dicari oleh pelanggan kami.
                 </p>
               </div>
             </div>
-            <PlantGrid showPopular={true} />
+
+            {/* Tombol Filter */}
+            <div className="flex justify-center gap-2 my-6">
+              <Button
+                variant={productFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setProductFilter('all')}
+                className={productFilter === 'all' ? 'bg-green-600 hover:bg-green-700' : 'dark:border-gray-600'}
+              >
+                <LayoutGrid className="mr-2 h-4 w-4" /> Semua
+              </Button>
+              <Button
+                variant={productFilter === 'tanaman' ? 'default' : 'outline'}
+                onClick={() => setProductFilter('tanaman')}
+                 className={productFilter === 'tanaman' ? 'bg-green-600 hover:bg-green-700' : 'dark:border-gray-600'}
+              >
+                <Leaf className="mr-2 h-4 w-4" /> Tanaman
+              </Button>
+              <Button
+                variant={productFilter === 'benih' ? 'default' : 'outline'}
+                onClick={() => setProductFilter('benih')}
+                className={productFilter === 'benih' ? 'bg-green-600 hover:bg-green-700' : 'dark:border-gray-600'}
+              >
+                <Sprout className="mr-2 h-4 w-4" /> Benih
+              </Button>
+            </div>
+
+            <PlantGrid showPopular={true} productTypeFilter={productFilter} /> {/* Kirim filter ke PlantGrid */}
           </div>
         </section>
 
@@ -98,16 +131,13 @@ export default function Home() {
       </main>
       <footer className="w-full border-t bg-background py-8 dark:border-gray-800">
         <div className="container flex flex-col items-center justify-between gap-6 md:flex-row">
-          {/* Logo section with flex-1 for desktop */}
           <div className="md:flex-1 flex items-center justify-center md:justify-start gap-2">
             <Leaf className="h-6 w-6 text-green-600 dark:text-green-500" />
             <span className="text-xl font-semibold">BenihKu</span>
           </div>
-          {/* Copyright notice - centered text */}
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center order-last md:order-none md:flex-shrink-0">
             © 2025 BenihKu. Semua hak dilindungi.
           </p>
-          {/* Links section with flex-1 and content justified to the end for desktop */}
           <div className="md:flex-1 flex justify-center md:justify-end gap-4 sm:gap-6">
             <Link href="#" className="text-sm font-medium hover:text-green-600 dark:hover:text-green-500">
               Syarat & Ketentuan
