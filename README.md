@@ -22,31 +22,31 @@ Project dapat diakses pada link berikut: **[https://www.projectrpl.site/](https:
 
 1. Clone this repository
 
-   \`\`\`bash
+   ```bash
    git clone https://github.com/NSP-MO/BenihKu-ProjectRPL.git
    cd "BenihKu-ProjectRPL"
-   \`\`\`
+   ```
 
 2. Edit the lib/supabase.ts for connecting a new supabase database.
 
-   \`\`\`env
+   ```env
    NEXT_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
    # Optional (server-side only):
    SUPABASE_SERVICE_KEY=<your-service-role-key>
-   \`\`\`
+   ```
 
 3. Install dependencies
 
-   \`\`\`bash
+   ```bash
    pnpm install
-   \`\`\`
+   ```
 
 4. Run the development server
 
-   \`\`\`bash
+   ```bash
    pnpm dev
-   \`\`\`
+   ```
 
 5. Open the website in your browser at [http://localhost:3000](http://localhost:3000)
 
