@@ -5,7 +5,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { ArrowLeft, Heart, MessageCircle, ShoppingCart, Loader2 } from "lucide-react"
+import { ArrowLeft, Heart, MessageCircle, ShoppingCart, Loader2, Info, LinkIcon, Users, Star, Palette, MapPin, ExternalLink } from "lucide-react" // Tambahkan ikon baru
 import { useRouter, usePathname } from "next/navigation"
 import { QRCodeSVG } from "qrcode.react"
 
@@ -34,6 +34,27 @@ import { storeNavigationPath } from "@/lib/navigation-utils"
 import { toast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
+// Helper component untuk Card Detail Tambahan
+const DetailInfoCard: React.FC<{ title: string; value?: string | number | null; icon?: React.ElementType, isLink?: boolean }> = ({ title, value, icon: Icon, isLink }) => {
+  if (!value) return null;
+  return (
+    <div className="rounded-lg border p-4 dark:border-gray-700 flex flex-col">
+      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center">
+        {Icon && <Icon className="h-4 w-4 mr-2" />}
+        {title}
+      </h3>
+      {isLink && typeof value === 'string' ? (
+        <a href={value} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline break-all">
+          {value} <ExternalLink className="inline h-3 w-3 ml-1" />
+        </a>
+      ) : (
+        <p className="text-gray-800 dark:text-gray-200 break-words">{value}</p>
+      )}
+    </div>
+  );
+};
+
+
 export default function ProductPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const pathname = usePathname()
@@ -50,7 +71,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   const [product, setProduct] = useState<Product | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Store current path for back navigation
   useEffect(() => {
     if (pathname) {
       storeNavigationPath(pathname)
@@ -99,7 +119,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real app, this would send the message to the seller
     alert(`Pesan Anda telah dikirim ke ${product.seller?.name}. Mereka akan segera menghubungi Anda.`)
     setContactFormOpen(false)
     setContactForm({
@@ -127,7 +146,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
       return;
     }
     if (!user) {
-      // Redirect to login if not authenticated
       router.push(`/auth/login?returnUrl=${encodeURIComponent(window.location.pathname)}`)
       return
     }
@@ -150,33 +168,24 @@ export default function ProductPage({ params }: { params: { id: string } }) {
       return;
     }
     if (!user) {
-      // Redirect to login if not authenticated
       router.push(`/auth/login?returnUrl=${encodeURIComponent(window.location.pathname)}`)
       return
     }
-
-    // Store current path before navigating
     storeNavigationPath(pathname)
-
-    // Add to cart and redirect to checkout
     addItem({
       id: product.id,
       name: product.name,
       price: product.price,
       image: product.image,
     })
-
     router.push("/cart")
   }
 
   const handleContactSeller = () => {
     if (!user) {
-      // Redirect to login if not authenticated
       router.push(`/auth/login?returnUrl=${encodeURIComponent(window.location.pathname)}`)
       return
     }
-
-    // Pre-fill form with user data
     setContactForm({
       name: user.user_metadata?.name || "",
       email: user.email || "",
@@ -201,7 +210,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   }
   
   const isProductDraft = product.is_published === false;
-
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -258,11 +266,12 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               </Alert>
             )}
 
-
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">Deskripsi</h2>
-              {/* Updated text color for description */}
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{product.description}</p>
+              <div 
+                className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line prose prose-sm dark:prose-invert max-w-full"
+                dangerouslySetInnerHTML={{ __html: product.description.replace(/\n/g, "<br />") || "Deskripsi tidak tersedia." }}
+              />
             </div>
 
             <div className="mb-6">
@@ -362,7 +371,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
         <Tabs defaultValue="care" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8">
             <TabsTrigger value="care">Cara Merawat</TabsTrigger>
-            <TabsTrigger value="details">Detail Produk</TabsTrigger>
+            <TabsTrigger value="details">Detail Tambahan</TabsTrigger>
           </TabsList>
           <TabsContent value="care" className="space-y-4">
             <div className="grid gap-6 md:grid-cols-2">
@@ -394,27 +403,27 @@ export default function ProductPage({ params }: { params: { id: string } }) {
           </TabsContent>
           <TabsContent value="details">
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4 rounded-lg border p-4">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Kategori</h3>
-                  <p>{product.category}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Penjual</h3>
-                  <p>{seller.name}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Rating Penjual</h3>
-                  <p>⭐ {seller.rating}/5</p>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <DetailInfoCard title="Kategori" value={product.category} icon={Palette} />
+                {product.origin && <DetailInfoCard title="Asal-Usul" value={product.origin} icon={MapPin} />}
+                {product.recommended_tools_materials && (
+                  <DetailInfoCard title="Rekomendasi Alat/Bahan" value={product.recommended_tools_materials} icon={Info}/>
+                )}
+                {product.related_link && (
+                  <DetailInfoCard title="Link Terkait" value={product.related_link} icon={LinkIcon} isLink />
+                )}
+                <DetailInfoCard title="Penjual" value={seller.name} icon={Users} />
+                <DetailInfoCard title="Rating Penjual" value={`⭐ ${seller.rating}/5`} icon={Star} />
               </div>
-              <div className="rounded-lg border p-4">
-                <h3 className="font-semibold mb-2">Deskripsi Lengkap</h3>
-                {/* Updated text color */}
-                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{product.description}</p>
-                <p className="mt-4 text-gray-700 dark:text-gray-300 leading-relaxed">
+              
+              <div className="rounded-lg border p-4 dark:border-gray-700">
+                <h3 className="font-semibold mb-2 flex items-center">
+                    <Info className="h-4 w-4 mr-2" />
+                    Catatan Tambahan
+                </h3>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                   Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik,
-                  segera pindahkan ke pot yang lebih besar setelah menerima tanaman.
+                  segera pindahkan ke pot yang lebih besar setelah menerima tanaman. Warna dan bentuk tanaman mungkin sedikit berbeda dari gambar karena faktor alamiah.
                 </p>
               </div>
             </div>
@@ -437,7 +446,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               />
             </div>
             <div>
-              {/* Updated text color for QR code description */}
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-2">
                 Scan QR code ini untuk membagikan produk ini dengan teman atau keluarga.
               </p>
