@@ -64,7 +64,7 @@ export default function CategoriesPage() {
           "Tanaman Air": "https://rgsmubwxaddbakgdzcrf.supabase.co/storage/v1/object/public/images/categories/SPR-houseplants-grown-in-water-4177520-hero-264670857d8b4c68a66b6d63c20e179e.jpg?height=300&width=300&text=Air",
           "Tanaman Buah": "https://rgsmubwxaddbakgdzcrf.supabase.co/storage/v1/object/public/images/categories/20220516_tm_blackberry_black_cascade.jpg?height=300&width=300&text=Buah",
           "Tanaman Obat": "https://rgsmubwxaddbakgdzcrf.supabase.co/storage/v1/object/public/images/categories/61b474a55ae0c.jpg?height=300&width=300&text=Obat",
-          "Benih": "https://rgsmubwxaddbakgdzcrf.supabase.co/storage/v1/object/public/images/categories/benih-tanaman.jpg",
+          "Benih": "https://rgsmubwxaddbakgdzcrf.supabase.co/storage/v1/object/public/images/seeds/seeds-category.jpg", // URL gambar untuk kategori Benih
         }
 
         const categoryList: CategoryDisplayInfo[] = categoryCountsResults
