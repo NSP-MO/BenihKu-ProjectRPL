@@ -1,3 +1,4 @@
+// app/admin/products/add/page.tsx
 "use client"
 
 import type React from "react"
@@ -18,20 +19,20 @@ import { createProduct } from "@/lib/admin"
 import { getAllCategories } from "@/lib/products"
 import { ImageUpload } from "@/components/image-upload"
 import { toast } from "@/components/ui/use-toast"
-import { Checkbox } from "@/components/ui/checkbox" // Import Checkbox
+import { Checkbox } from "@/components/ui/checkbox" 
 
-// Define a more specific type for form data if needed, or use Product from lib/products
 interface FormData {
   name: string
-  price: string // Input fields are initially strings
-  description: string
+  price: string 
+  description: string // Untuk deskripsi utama produk
   category: string
-  stock: string // Input fields are initially strings
+  stock: string 
   image_url: string
   image_path: string
   show_on_homepage: boolean
   is_popular: boolean
-  status: string // Or use a specific type 'published' | 'draft'
+  status: string 
+  shipping_info_notes: string // Field untuk catatan pengiriman pot
   careInstructions: {
     light: string
     water: string
@@ -47,11 +48,8 @@ export default function AddProductPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [categories, setCategories] = useState<string[]>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
-  // const [error, setError] = useState("") // Handled by toast
-  // const [success, setSuccess] = useState("") // Handled by toast
 
   const [formData, setFormData] = useState<FormData>({
-    // Use the interface here
     name: "",
     price: "",
     description: "",
@@ -62,6 +60,7 @@ export default function AddProductPage() {
     show_on_homepage: false,
     is_popular: false,
     status: "published",
+    shipping_info_notes: "Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik, segera pindahkan ke pot yang lebih besar setelah menerima tanaman.", // Default value
     careInstructions: {
       light: "",
       water: "",
@@ -72,7 +71,6 @@ export default function AddProductPage() {
     },
   })
 
-  // Load categories
   useEffect(() => {
     const loadCategories = async () => {
       setIsLoadingCategories(true)
@@ -90,7 +88,6 @@ export default function AddProductPage() {
         setIsLoadingCategories(false)
       }
     }
-
     loadCategories()
   }, [])
 
@@ -112,7 +109,6 @@ export default function AddProductPage() {
     setFormData((prev) => ({
       ...prev,
       careInstructions: {
-        // @ts-ignore
         ...(prev.careInstructions || {}),
         [name]: value,
       },
@@ -132,15 +128,15 @@ export default function AddProductPage() {
         stock: Number.parseInt(formData.stock) || 0,
         image_url: formData.image_url,
         image_path: formData.image_path,
-        show_on_homepage: formData.show_on_homepage,
-        is_popular: formData.is_popular,
+        is_popular: formData.is_popular, // show_on_homepage tidak ada di createProduct, jadi tidak perlu dikirim
         is_published: formData.status === "published",
         care_instructions: formData.careInstructions,
+        shipping_info_notes: formData.shipping_info_notes, // Kirim data ini
       })
 
       if (result.success) {
         toast({ title: "Success", description: "Product added successfully" })
-        router.push("/admin/dashboard") // Redirect to main admin dashboard
+        router.push("/admin/dashboard") 
       } else {
         toast({ title: "Error", description: result.error || "Failed to add product", variant: "destructive" })
       }
@@ -155,8 +151,6 @@ export default function AddProductPage() {
     <ProtectedRoute adminOnly>
       <div className="container py-12">
         <Link href="/admin/dashboard" className="inline-flex items-center mb-6">
-          {" "}
-          {/* Link to main admin dashboard */}
           <Button variant="ghost" className="p-0">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Kembali ke Dashboard
@@ -194,6 +188,7 @@ export default function AddProductPage() {
                 <CardDescription>Informasi dasar tentang produk.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* ... (input fields for name, price, category, stock, status, is_popular, show_on_homepage) ... */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nama Produk</Label>
@@ -277,7 +272,7 @@ export default function AddProductPage() {
                   <Label htmlFor="show_on_homepage">Tampilkan di Homepage</Label>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description">Deskripsi</Label>
+                  <Label htmlFor="description">Deskripsi Lengkap Produk</Label> {/* Label diperjelas */}
                   <Textarea
                     id="description"
                     name="description"
@@ -285,7 +280,22 @@ export default function AddProductPage() {
                     onChange={handleInputChange}
                     rows={5}
                     required
+                    placeholder="Masukkan deskripsi lengkap mengenai produk di sini..."
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shipping_info_notes">Catatan Info Pengiriman Pot</Label>
+                  <Textarea
+                    id="shipping_info_notes"
+                    name="shipping_info_notes"
+                    value={formData.shipping_info_notes}
+                    onChange={handleInputChange}
+                    rows={3}
+                    placeholder="Contoh: Tanaman ini dikirim dalam pot plastik..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Teks ini akan muncul di bawah deskripsi lengkap pada halaman produk.
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -297,7 +307,6 @@ export default function AddProductPage() {
                 <CardDescription>Detail cara merawat tanaman.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Care Instructions Fields */}
                 {Object.keys(formData.careInstructions).map((key) => (
                   <div className="space-y-2" key={key}>
                     <Label htmlFor={key} className="capitalize">
@@ -306,8 +315,7 @@ export default function AddProductPage() {
                     <Textarea
                       id={key}
                       name={key}
-                      // @ts-ignore
-                      value={formData.careInstructions[key]}
+                      value={formData.careInstructions[key as keyof typeof formData.careInstructions]}
                       onChange={handleCareInstructionsChange}
                       rows={2}
                     />
@@ -328,7 +336,6 @@ export default function AddProductPage() {
                     setFormData((prev) => ({ ...prev, image_url: url, image_path: path }))
                   }}
                   onError={(errorMsg) => {
-                    // Changed from 'error' to 'errorMsg' to avoid conflict
                     toast({ title: "Error", description: errorMsg, variant: "destructive" })
                   }}
                 />
