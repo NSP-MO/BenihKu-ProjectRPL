@@ -5,7 +5,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { ArrowLeft, Heart, MessageCircle, ShoppingCart, Loader2 } from "lucide-react"
+import { ArrowLeft, Heart, MessageCircle, ShoppingCart, Loader2, Info, LinkIcon, Users, Star, Palette, MapPin, ExternalLink } from "lucide-react" // Tambahkan ikon baru
 import { useRouter, usePathname } from "next/navigation"
 import { QRCodeSVG } from "qrcode.react"
 
@@ -33,6 +33,27 @@ import { getProductById, type Product } from "@/lib/products"
 import { storeNavigationPath } from "@/lib/navigation-utils"
 import { toast } from "@/components/ui/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+
+// Helper component untuk Card Detail Tambahan
+const DetailInfoCard: React.FC<{ title: string; value?: string | number | null; icon?: React.ElementType, isLink?: boolean }> = ({ title, value, icon: Icon, isLink }) => {
+  if (!value) return null;
+  return (
+    <div className="rounded-lg border p-4 dark:border-gray-700 flex flex-col">
+      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center">
+        {Icon && <Icon className="h-4 w-4 mr-2" />}
+        {title}
+      </h3>
+      {isLink && typeof value === 'string' ? (
+        <a href={value} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline break-all">
+          {value} <ExternalLink className="inline h-3 w-3 ml-1" />
+        </a>
+      ) : (
+        <p className="text-gray-800 dark:text-gray-200 break-words">{value}</p>
+      )}
+    </div>
+  );
+};
+
 
 export default function ProductPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -245,11 +266,10 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               </Alert>
             )}
 
-            {/* Bagian Deskripsi di sini akan menampilkan product.description yang sudah diperkaya */}
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">Deskripsi</h2>
-              <p 
-                className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line"
+              <div 
+                className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line prose prose-sm dark:prose-invert max-w-full"
                 dangerouslySetInnerHTML={{ __html: product.description.replace(/\n/g, "<br />") || "Deskripsi tidak tersedia." }}
               />
             </div>
@@ -383,56 +403,24 @@ export default function ProductPage({ params }: { params: { id: string } }) {
           </TabsContent>
           <TabsContent value="details">
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 rounded-lg border p-4 dark:border-gray-700">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Kategori</h3>
-                  <p>{product.category}</p>
-                </div>
-                 {product.origin && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Asal-Usul</h3>
-                    <p>{product.origin}</p>
-                  </div>
-                )}
-                {product.lifespan && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Usia/Masa Produktif</h3>
-                    <p>{product.lifespan}</p>
-                  </div>
-                )}
-                {product.growth_details && (
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Detail Pertumbuhan</h3>
-                    <p>{product.growth_details}</p>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <DetailInfoCard title="Kategori" value={product.category} icon={Palette} />
+                {product.origin && <DetailInfoCard title="Asal-Usul" value={product.origin} icon={MapPin} />}
+                {product.recommended_tools_materials && (
+                  <DetailInfoCard title="Rekomendasi Alat/Bahan" value={product.recommended_tools_materials} icon={Info}/>
                 )}
                 {product.related_link && (
-                  <div className="sm:col-span-2 md:col-span-1">
-                    <h3 className="text-sm font-medium text-gray-500">Link Terkait</h3>
-                    <a href={product.related_link} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline break-all">
-                      {product.related_link}
-                    </a>
-                  </div>
+                  <DetailInfoCard title="Link Terkait" value={product.related_link} icon={LinkIcon} isLink />
                 )}
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Penjual</h3>
-                  <p>{seller.name}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Rating Penjual</h3>
-                  <p>⭐ {seller.rating}/5</p>
-                </div>
+                <DetailInfoCard title="Penjual" value={seller.name} icon={Users} />
+                <DetailInfoCard title="Rating Penjual" value={`⭐ ${seller.rating}/5`} icon={Star} />
               </div>
-              {product.recommended_tools_materials && (
-                <div className="rounded-lg border p-4 dark:border-gray-700">
-                  <h3 className="font-semibold mb-2">Rekomendasi Alat/Bahan</h3>
-                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                     {product.recommended_tools_materials}
-                  </p>
-                </div>
-              )}
+              
               <div className="rounded-lg border p-4 dark:border-gray-700">
-                <h3 className="font-semibold mb-2">Catatan Tambahan</h3>
+                <h3 className="font-semibold mb-2 flex items-center">
+                    <Info className="h-4 w-4 mr-2" />
+                    Catatan Tambahan
+                </h3>
                 <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                   Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik,
                   segera pindahkan ke pot yang lebih besar setelah menerima tanaman. Warna dan bentuk tanaman mungkin sedikit berbeda dari gambar karena faktor alamiah.
