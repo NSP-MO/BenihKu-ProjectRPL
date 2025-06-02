@@ -1,3 +1,4 @@
+// lib/admin.ts
 "use server"
 
 import { createServerSupabaseClient } from "@/lib/supabase"
@@ -8,7 +9,7 @@ export async function getAdminProducts() {
   try {
     const { data, error } = await supabase
       .from("products")
-      .select("*") // is_popular will be selected
+      .select("*")
       .order("id")
 
     if (error) {
@@ -30,7 +31,7 @@ export async function updateProduct(id: number, productData: Partial<Product>) {
     }
 
     if (productData.name !== undefined) updateData.name = productData.name;
-    if (productData.description !== undefined) updateData.description = productData.description;
+    if (productData.description !== undefined) updateData.description = productData.description; 
     if (productData.category !== undefined) updateData.category = productData.category;
 
     if (typeof productData.price === "number") {
@@ -49,12 +50,15 @@ export async function updateProduct(id: number, productData: Partial<Product>) {
       updateData.is_popular = productData.is_popular
     }
     
-    // If you had show_on_homepage, and want to remove it from updates:
-    // delete productData.show_on_homepage; // Or ensure it's not in updateData
-
-     if (typeof productData.is_published === "boolean") { 
+    if (typeof productData.is_published === "boolean") { 
       updateData.is_published = productData.is_published
     }
+
+    if (productData.origin !== undefined) updateData.origin = productData.origin;
+    // lifespan dan growth_details dihapus
+    if (productData.recommended_tools_materials !== undefined) updateData.recommended_tools_materials = productData.recommended_tools_materials;
+    if (productData.related_link !== undefined) updateData.related_link = productData.related_link;
+
 
     if (productData.care_instructions) {
       updateData.care_instructions = productData.care_instructions
@@ -87,6 +91,11 @@ export async function createProduct({
   is_popular = false, 
   is_published = true,
   care_instructions,
+  origin,
+  // lifespan dihapus
+  // growth_details dihapus
+  recommended_tools_materials,
+  related_link,
 }: {
   name: string
   price: number | string
@@ -97,7 +106,10 @@ export async function createProduct({
   image_path?: string
   is_popular?: boolean; 
   is_published?: boolean;
-  care_instructions?: Product['care_instructions']; 
+  care_instructions?: Product['care_instructions'];
+  origin?: string;
+  recommended_tools_materials?: string;
+  related_link?: string;
 }) {
   try {
     const supabase = createServerSupabaseClient()
@@ -118,6 +130,10 @@ export async function createProduct({
           is_popular: is_popular,
           is_published: is_published,
           care_instructions: care_instructions || null,
+          origin: origin || null,
+          // lifespan dan growth_details dihapus dari insert
+          recommended_tools_materials: recommended_tools_materials || null,
+          related_link: related_link || null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -135,6 +151,7 @@ export async function createProduct({
   }
 }
 
+// ... (deleteProduct tetap sama)
 export async function deleteProduct(id: number) {
   const supabase = createServerSupabaseClient()
   try {
