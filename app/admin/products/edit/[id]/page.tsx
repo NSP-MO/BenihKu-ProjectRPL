@@ -41,11 +41,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     price: 0,
     image: "",
     category: "",
-    description: "",
+    description: "", // Untuk deskripsi utama produk
     is_published: true,
     stock: 0,
     is_popular: false,
-    shipping_info_notes: "Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik, segera pindahkan ke pot yang lebih besar setelah menerima tanaman.", // Default
+    shipping_info_notes: "Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik, segera pindahkan ke pot yang lebih besar setelah menerima tanaman.", // Default jika field baru
     care_instructions: {
       light: "",
       water: "",
@@ -91,6 +91,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             ...productData,
             is_published: productData.is_published !== undefined ? productData.is_published : true,
             is_popular: !!productData.is_popular,
+            // Pastikan shipping_info_notes diambil dari database, atau gunakan default jika tidak ada
             shipping_info_notes: productData.shipping_info_notes || "Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik, segera pindahkan ke pot yang lebih besar setelah menerima tanaman.",
             care_instructions: productData.care_instructions || {
               light: "",
@@ -162,6 +163,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         productDataToUpdate.image_bucket = uploadedImageBucket
       }
 
+      // Pastikan shipping_info_notes juga dikirim
+      // productDataToUpdate.shipping_info_notes akan sudah ada di product state
+
       const { success: updateSuccess, error: updateError } = await updateProduct(productId, productDataToUpdate)
 
       if (updateSuccess) {
@@ -228,6 +232,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   <CardDescription>Perbarui informasi dasar produk.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* ... (input fields for name, price, category, stock, status, is_popular) ... */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Nama Produk</Label>
@@ -309,7 +314,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="description">Deskripsi</Label>
+                    <Label htmlFor="description">Deskripsi Lengkap Produk</Label> {/* Label diperjelas */}
                     <Textarea
                       id="description"
                       name="description"
@@ -317,9 +322,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       onChange={handleInputChange}
                       rows={5}
                       required
+                      placeholder="Masukkan deskripsi lengkap mengenai produk di sini..."
                     />
                   </div>
-                  {/* Input untuk shipping_info_notes */}
                   <div className="space-y-2">
                     <Label htmlFor="shipping_info_notes">Catatan Info Pengiriman Pot</Label>
                     <Textarea
@@ -328,9 +333,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       value={product.shipping_info_notes || ""}
                       onChange={handleInputChange}
                       rows={3}
+                      placeholder="Contoh: Tanaman ini dikirim dalam pot plastik..."
                     />
-                     <p className="text-xs text-muted-foreground">
-                      Informasi mengenai pot saat pengiriman (misal: "Tanaman ini dikirim dalam pot plastik...").
+                    <p className="text-xs text-muted-foreground">
+                      Teks ini akan muncul di bawah deskripsi lengkap pada halaman produk.
                     </p>
                   </div>
                 </CardContent>
