@@ -2,7 +2,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { ArrowLeft, Heart, MessageCircle, ShoppingCart, Loader2 } from "lucide-react"
@@ -185,7 +184,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
     rating: 4.5,
     response_time: "± 1 jam",
   }
-
+  
   const isProductDraft = product.is_published === false;
 
   return (
@@ -234,7 +233,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                 <p className="text-2xl font-bold">Rp {product.price.toLocaleString("id-ID")}</p>
               </div>
             </div>
-
+            
             {isProductDraft && (
               <Alert variant="destructive" className="mb-6">
                 <AlertDescription>
@@ -243,10 +242,15 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               </Alert>
             )}
 
+            {/* Deskripsi singkat produk bisa ditampilkan di sini jika ada field terpisah, atau awal dari product.description */}
             <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-2">Deskripsi</h2>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{product.description}</p>
+              <h2 className="text-lg font-semibold mb-2">Deskripsi Singkat</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                {/* Misal, kita tampilkan 150 karakter pertama dari deskripsi lengkap sebagai deskripsi singkat */}
+                {product.description ? `${product.description.substring(0, 150)}...` : 'Deskripsi tidak tersedia.'}
+              </p>
             </div>
+
 
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-4">
@@ -342,11 +346,42 @@ export default function ProductPage({ params }: { params: { id: string } }) {
 
         <Separator className="my-8" />
 
-        <Tabs defaultValue="care" className="w-full">
+        <Tabs defaultValue="details" className="w-full"> {/* Default ke "details" */}
           <TabsList className="grid w-full grid-cols-2 mb-8">
+            <TabsTrigger value="details">Detail Produk</TabsTrigger> {/* Tab "Deskripsi Lengkap" */}
             <TabsTrigger value="care">Cara Merawat</TabsTrigger>
-            <TabsTrigger value="details">Detail Produk</TabsTrigger>
           </TabsList>
+          <TabsContent value="details"> {/* Konten untuk "Deskripsi Lengkap" */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4 rounded-lg border p-4 dark:border-gray-700">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Kategori</h3>
+                  <p>{product.category}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Penjual</h3>
+                  <p>{seller.name}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Rating Penjual</h3>
+                  <p>⭐ {seller.rating}/5</p>
+                </div>
+              </div>
+              <div className="rounded-lg border p-4 dark:border-gray-700">
+                <h3 className="font-semibold mb-2">Deskripsi Lengkap Produk</h3>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                  {product.description || "Deskripsi lengkap tidak tersedia."}
+                </p>
+                
+                {/* Menampilkan catatan pengiriman pot yang bisa diedit */}
+                {product.shipping_info_notes && (
+                  <p className="mt-4 text-gray-700 dark:text-gray-300 leading-relaxed">
+                    {product.shipping_info_notes}
+                  </p>
+                )}
+              </div>
+            </div>
+          </TabsContent>
           <TabsContent value="care" className="space-y-4">
             <div className="grid gap-6 md:grid-cols-2">
               <div className="rounded-lg border p-4 dark:border-gray-700">
@@ -375,32 +410,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               </div>
             </div>
           </TabsContent>
-          <TabsContent value="details">
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4 rounded-lg border p-4">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Kategori</h3>
-                  <p>{product.category}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Penjual</h3>
-                  <p>{seller.name}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500">Rating Penjual</h3>
-                  <p>⭐ {seller.rating}/5</p>
-                </div>
-              </div>
-              <div className="rounded-lg border p-4">
-                <h3 className="font-semibold mb-2">Deskripsi Lengkap</h3>
-                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{product.description}</p>
-                {/* Ganti teks hardcoded dengan data dinamis */}
-                <p className="mt-4 text-gray-700 dark:text-gray-300 leading-relaxed">
-                  {product.shipping_info_notes || "Informasi pengiriman pot tidak tersedia."}
-                </p>
-              </div>
-            </div>
-          </TabsContent>
         </Tabs>
 
         <Separator className="my-8" />
@@ -410,7 +419,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
           <div className="flex flex-col md:flex-row items-center gap-6">
             <div className="bg-white p-4 rounded-lg border">
               <QRCodeSVG
-                value={typeof window !== "undefined" ? `<span class="math-inline">\{window\.location\.origin\}/product/</span>{product.id}` : `/product/${product.id}`}
+                value={typeof window !== "undefined" ? `${window.location.origin}/product/${product.id}` : `/product/${product.id}`}
                 size={150}
                 bgColor={"#ffffff"}
                 fgColor={"#000000"}
