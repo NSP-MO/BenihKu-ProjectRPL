@@ -50,7 +50,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   const [product, setProduct] = useState<Product | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Store current path for back navigation
   useEffect(() => {
     if (pathname) {
       storeNavigationPath(pathname)
@@ -99,7 +98,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
 
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // In a real app, this would send the message to the seller
     alert(`Pesan Anda telah dikirim ke ${product.seller?.name}. Mereka akan segera menghubungi Anda.`)
     setContactFormOpen(false)
     setContactForm({
@@ -127,7 +125,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
       return;
     }
     if (!user) {
-      // Redirect to login if not authenticated
       router.push(`/auth/login?returnUrl=${encodeURIComponent(window.location.pathname)}`)
       return
     }
@@ -150,33 +147,24 @@ export default function ProductPage({ params }: { params: { id: string } }) {
       return;
     }
     if (!user) {
-      // Redirect to login if not authenticated
       router.push(`/auth/login?returnUrl=${encodeURIComponent(window.location.pathname)}`)
       return
     }
-
-    // Store current path before navigating
     storeNavigationPath(pathname)
-
-    // Add to cart and redirect to checkout
     addItem({
       id: product.id,
       name: product.name,
       price: product.price,
       image: product.image,
     })
-
     router.push("/cart")
   }
 
   const handleContactSeller = () => {
     if (!user) {
-      // Redirect to login if not authenticated
       router.push(`/auth/login?returnUrl=${encodeURIComponent(window.location.pathname)}`)
       return
     }
-
-    // Pre-fill form with user data
     setContactForm({
       name: user.user_metadata?.name || "",
       email: user.email || "",
@@ -201,7 +189,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
   }
   
   const isProductDraft = product.is_published === false;
-
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -258,11 +245,13 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               </Alert>
             )}
 
-
+            {/* Bagian Deskripsi di sini akan menampilkan product.description yang sudah diperkaya */}
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-2">Deskripsi</h2>
-              {/* Updated text color for description */}
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{product.description}</p>
+              <p 
+                className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line"
+                dangerouslySetInnerHTML={{ __html: product.description.replace(/\n/g, "<br />") || "Deskripsi tidak tersedia." }}
+              />
             </div>
 
             <div className="mb-6">
@@ -362,7 +351,7 @@ export default function ProductPage({ params }: { params: { id: string } }) {
         <Tabs defaultValue="care" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-8">
             <TabsTrigger value="care">Cara Merawat</TabsTrigger>
-            <TabsTrigger value="details">Detail Produk</TabsTrigger>
+            <TabsTrigger value="details">Detail Tambahan</TabsTrigger>
           </TabsList>
           <TabsContent value="care" className="space-y-4">
             <div className="grid gap-6 md:grid-cols-2">
@@ -394,11 +383,37 @@ export default function ProductPage({ params }: { params: { id: string } }) {
           </TabsContent>
           <TabsContent value="details">
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4 rounded-lg border p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 rounded-lg border p-4 dark:border-gray-700">
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Kategori</h3>
                   <p>{product.category}</p>
                 </div>
+                 {product.origin && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Asal-Usul</h3>
+                    <p>{product.origin}</p>
+                  </div>
+                )}
+                {product.lifespan && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Usia/Masa Produktif</h3>
+                    <p>{product.lifespan}</p>
+                  </div>
+                )}
+                {product.growth_details && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Detail Pertumbuhan</h3>
+                    <p>{product.growth_details}</p>
+                  </div>
+                )}
+                {product.related_link && (
+                  <div className="sm:col-span-2 md:col-span-1">
+                    <h3 className="text-sm font-medium text-gray-500">Link Terkait</h3>
+                    <a href={product.related_link} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:underline break-all">
+                      {product.related_link}
+                    </a>
+                  </div>
+                )}
                 <div>
                   <h3 className="text-sm font-medium text-gray-500">Penjual</h3>
                   <p>{seller.name}</p>
@@ -408,13 +423,19 @@ export default function ProductPage({ params }: { params: { id: string } }) {
                   <p>⭐ {seller.rating}/5</p>
                 </div>
               </div>
-              <div className="rounded-lg border p-4">
-                <h3 className="font-semibold mb-2">Deskripsi Lengkap</h3>
-                {/* Updated text color */}
-                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{product.description}</p>
-                <p className="mt-4 text-gray-700 dark:text-gray-300 leading-relaxed">
+              {product.recommended_tools_materials && (
+                <div className="rounded-lg border p-4 dark:border-gray-700">
+                  <h3 className="font-semibold mb-2">Rekomendasi Alat/Bahan</h3>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                     {product.recommended_tools_materials}
+                  </p>
+                </div>
+              )}
+              <div className="rounded-lg border p-4 dark:border-gray-700">
+                <h3 className="font-semibold mb-2">Catatan Tambahan</h3>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                   Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik,
-                  segera pindahkan ke pot yang lebih besar setelah menerima tanaman.
+                  segera pindahkan ke pot yang lebih besar setelah menerima tanaman. Warna dan bentuk tanaman mungkin sedikit berbeda dari gambar karena faktor alamiah.
                 </p>
               </div>
             </div>
@@ -437,7 +458,6 @@ export default function ProductPage({ params }: { params: { id: string } }) {
               />
             </div>
             <div>
-              {/* Updated text color for QR code description */}
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-2">
                 Scan QR code ini untuk membagikan produk ini dengan teman atau keluarga.
               </p>
