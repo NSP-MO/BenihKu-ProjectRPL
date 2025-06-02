@@ -1,3 +1,4 @@
+// lib/admin.ts
 "use server"
 
 import { createServerSupabaseClient } from "@/lib/supabase"
@@ -8,7 +9,7 @@ export async function getAdminProducts() {
   try {
     const { data, error } = await supabase
       .from("products")
-      .select("*") // is_popular will be selected
+      .select("*, shipping_info_notes") // Tambahkan shipping_info_notes
       .order("id")
 
     if (error) {
@@ -32,6 +33,7 @@ export async function updateProduct(id: number, productData: Partial<Product>) {
     if (productData.name !== undefined) updateData.name = productData.name;
     if (productData.description !== undefined) updateData.description = productData.description;
     if (productData.category !== undefined) updateData.category = productData.category;
+    if (productData.shipping_info_notes !== undefined) updateData.shipping_info_notes = productData.shipping_info_notes; // Tambahkan ini
 
     if (typeof productData.price === "number") {
       updateData.price = productData.price
@@ -48,9 +50,6 @@ export async function updateProduct(id: number, productData: Partial<Product>) {
     if (typeof productData.is_popular === "boolean") {
       updateData.is_popular = productData.is_popular
     }
-    
-    // If you had show_on_homepage, and want to remove it from updates:
-    // delete productData.show_on_homepage; // Or ensure it's not in updateData
 
      if (typeof productData.is_published === "boolean") { 
       updateData.is_published = productData.is_published
@@ -87,6 +86,7 @@ export async function createProduct({
   is_popular = false, 
   is_published = true,
   care_instructions,
+  shipping_info_notes, // Tambahkan ini
 }: {
   name: string
   price: number | string
@@ -97,7 +97,8 @@ export async function createProduct({
   image_path?: string
   is_popular?: boolean; 
   is_published?: boolean;
-  care_instructions?: Product['care_instructions']; 
+  care_instructions?: Product['care_instructions'];
+  shipping_info_notes?: string; // Tambahkan ini
 }) {
   try {
     const supabase = createServerSupabaseClient()
@@ -118,6 +119,7 @@ export async function createProduct({
           is_popular: is_popular,
           is_published: is_published,
           care_instructions: care_instructions || null,
+          shipping_info_notes: shipping_info_notes || 'Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik, segera pindahkan ke pot yang lebih besar setelah menerima tanaman.', // Default value
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
