@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     Jika pengguna mengunggah gambar, coba identifikasi tanaman dalam gambar tersebut dan berikan informasi yang relevan jika memungkinkan.
     Jika pertanyaan di luar topik tanaman atau BenihKu, tolak dengan sopan.
     Selalu jawab dalam Bahasa Indonesia.
-    Jika ditanyakan rekomendasi, coba berikan rekomendasi terkait tanaman dahulu, dan 1 atau lebih benih`;
+    Jika ditanyakan rekomendasi, coba berikan rekomendasi terkait tanaman dahulu, dan 2 atau lebih benih`;
 
     if (imageFile) {
       const imagePart = await fileToGenerativePart(imageFile);
