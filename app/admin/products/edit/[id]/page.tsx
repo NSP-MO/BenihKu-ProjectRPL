@@ -44,9 +44,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     is_published: true,
     stock: 0,
     is_popular: false,
-    origin: "",
-    recommended_tools_materials: "",
-    related_link: "",
+    // show_on_homepage: false, // Removed
     care_instructions: {
       light: "",
       water: "",
@@ -57,6 +55,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     },
   })
 
+  // Load categories
   useEffect(() => {
     const loadCategories = async () => {
       setIsLoadingCategories(true)
@@ -70,11 +69,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           description: "Gagal memuat kategori. Menggunakan daftar default.",
           variant: "destructive",
         })
-         setCategories(["Tanaman Hias", "Tanaman Indoor", "Tanaman Outdoor", "Tanaman Gantung", "Kaktus & Sukulen", "Benih"])
       } finally {
         setIsLoadingCategories(false)
       }
     }
+
     loadCategories()
   }, [])
 
@@ -93,11 +92,14 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             ...productData,
             is_published: productData.is_published !== undefined ? productData.is_published : true,
             is_popular: !!productData.is_popular,
-            origin: productData.origin || "",
-            recommended_tools_materials: productData.recommended_tools_materials || "",
-            related_link: productData.related_link || "",
+            // show_on_homepage: !!productData.show_on_homepage, // Removed
             care_instructions: productData.care_instructions || {
-              light: "", water: "", soil: "", humidity: "", temperature: "", fertilizer: "",
+              light: "",
+              water: "",
+              soil: "",
+              humidity: "",
+              temperature: "",
+              fertilizer: "",
             },
           })
           if (productData.image) setUploadedImageUrl(productData.image)
@@ -122,6 +124,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   }
 
   const handleCheckboxChange = (name: "is_popular" | "is_published", checked: boolean | string) => {
+    // Removed show_on_homepage
     setProduct((prev) => ({ ...prev, [name]: !!checked }))
   }
 
@@ -155,15 +158,13 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       if (typeof productDataToUpdate.stock === "string")
         productDataToUpdate.stock = Number.parseInt(productDataToUpdate.stock, 10) || 0
 
+      // delete productDataToUpdate.show_on_homepage; // Ensure this field is not sent if column was removed
+
       if (uploadedImageUrl && uploadedImageUrl !== product.image) {
         productDataToUpdate.image = uploadedImageUrl
         productDataToUpdate.image_path = uploadedImagePath
         productDataToUpdate.image_bucket = uploadedImageBucket
       }
-      
-      // Hapus lifespan dan growth_details dari data yang akan diupdate
-      delete productDataToUpdate.lifespan;
-      delete productDataToUpdate.growth_details;
 
       const { success: updateSuccess, error: updateError } = await updateProduct(productId, productDataToUpdate)
 
@@ -218,16 +219,16 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           </Alert>
         ) : (
           <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="mb-6 grid w-full grid-cols-3">
+            <TabsList className="mb-6">
               <TabsTrigger value="basic">Informasi Dasar</TabsTrigger>
-              <TabsTrigger value="details">Detail Tambahan</TabsTrigger>
-              <TabsTrigger value="care">Perawatan & Gambar</TabsTrigger>
+              <TabsTrigger value="care">Perawatan</TabsTrigger>
+              <TabsTrigger value="images">Gambar</TabsTrigger>
             </TabsList>
 
             <TabsContent value="basic">
               <Card className="dark:border-gray-700">
                 <CardHeader>
-                  <CardTitle>Informasi Dasar Produk</CardTitle>
+                  <CardTitle>Informasi Dasar</CardTitle>
                   <CardDescription>Perbarui informasi dasar produk.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -311,108 +312,82 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       <Label htmlFor="is_popular">Populer (Tampil di Homepage)</Label>
                     </div>
                   </div>
+                  {/* Removed show_on_homepage checkbox */}
                   <div className="space-y-2">
-                    <Label htmlFor="description">Deskripsi Lengkap Produk</Label>
+                    <Label htmlFor="description">Deskripsi</Label>
                     <Textarea
                       id="description"
                       name="description"
                       value={product.description || ""}
                       onChange={handleInputChange}
-                      rows={8}
-                      placeholder="Masukkan deskripsi lengkap produk di sini, termasuk asal-usul, rekomendasi alat/bahan, dan link terkait jika ada. Informasi usia dan pertumbuhan juga bisa dimasukkan di sini jika relevan."
+                      rows={5}
                       required
                     />
-                     <p className="text-xs text-muted-foreground">
-                      Ini adalah deskripsi utama yang akan tampil di halaman produk. Gabungkan semua informasi relevan di sini.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="details">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Detail Tambahan (Opsional)</CardTitle>
-                  <CardDescription>Informasi ini dapat Anda masukkan ke dalam Deskripsi Lengkap di tab "Informasi Dasar".</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="origin">Asal-Usul Produk</Label>
-                    <Input id="origin" name="origin" value={product.origin || ""} onChange={handleInputChange} placeholder="Contoh: Amerika Tengah, Asia Tenggara"/>
-                  </div>
-                  {/* Input untuk lifespan dan growth_details dihapus */}
-                  <div className="space-y-2">
-                    <Label htmlFor="recommended_tools_materials">Rekomendasi Alat/Bahan Perawatan</Label>
-                    <Textarea id="recommended_tools_materials" name="recommended_tools_materials" value={product.recommended_tools_materials || ""} onChange={handleInputChange} rows={3} placeholder="Contoh: Tanah poros, pupuk NPK, pot diameter 20cm"/>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="related_link">Link Website Terkait (Jika Ada)</Label>
-                    <Input id="related_link" name="related_link" type="url" value={product.related_link || ""} onChange={handleInputChange} placeholder="https://contoh-sumber.com/info-tanaman"/>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="care">
-              <div className="grid md:grid-cols-2 gap-6">
-                <Card className="dark:border-gray-700">
-                  <CardHeader>
-                    <CardTitle>Informasi Perawatan</CardTitle>
-                    <CardDescription>Detail cara merawat tanaman.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {Object.entries(product.care_instructions || {}).map(([key, value]) => (
-                      <div className="space-y-2" key={key}>
-                        <Label htmlFor={key} className="capitalize">
-                          {key.replace(/([A-Z])/g, " $1")}
-                        </Label>
-                        <Textarea
-                          id={key}
-                          name={key}
-                          value={(value as string) || ""}
-                          onChange={handleCareInstructionsChange}
-                          rows={2}
-                        />
-                      </div>
-                    ))}
-                    {["light", "water", "soil", "humidity", "temperature", "fertilizer"].map((key) => {
-                      if (!product.care_instructions || !(key in product.care_instructions)) {
-                        return (
-                          <div className="space-y-2" key={key}>
-                            <Label htmlFor={key} className="capitalize">
-                              {key}
-                            </Label>
-                            <Textarea id={key} name={key} value={""} onChange={handleCareInstructionsChange} rows={2} />
-                          </div>
-                        )
-                      }
-                      return null
-                    })}
-                  </CardContent>
-                </Card>
-                <Card className="dark:border-gray-700">
-                  <CardHeader>
-                    <CardTitle>Gambar Produk</CardTitle>
-                    <CardDescription>Unggah atau perbarui gambar produk.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ImageUpload
-                      currentImage={product.image || uploadedImageUrl}
-                      onImageUploaded={(url, path, bucket) => {
-                        setUploadedImageUrl(url)
-                        setUploadedImagePath(path)
-                        if (bucket) setUploadedImageBucket(bucket)
-                        setProduct((prev) => ({ ...prev, image: url, image_path: path, image_bucket: bucket }))
-                        toast({ title: "Sukses", description: "Gambar berhasil diunggah!" })
-                      }}
-                      onError={(errorMsg) => {
-                        toast({ title: "Error", description: errorMsg, variant: "destructive" })
-                      }}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
+              <Card className="dark:border-gray-700">
+                <CardHeader>
+                  <CardTitle>Informasi Perawatan</CardTitle>
+                  <CardDescription>Detail cara merawat tanaman.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {Object.entries(product.care_instructions || {}).map(([key, value]) => (
+                    <div className="space-y-2" key={key}>
+                      <Label htmlFor={key} className="capitalize">
+                        {key.replace(/([A-Z])/g, " $1")}
+                      </Label>
+                      <Textarea
+                        id={key}
+                        name={key}
+                        value={(value as string) || ""}
+                        onChange={handleCareInstructionsChange}
+                        rows={2}
+                      />
+                    </div>
+                  ))}
+                  {["light", "water", "soil", "humidity", "temperature", "fertilizer"].map((key) => {
+                    if (!product.care_instructions || !(key in product.care_instructions)) {
+                      return (
+                        <div className="space-y-2" key={key}>
+                          <Label htmlFor={key} className="capitalize">
+                            {key}
+                          </Label>
+                          <Textarea id={key} name={key} value={""} onChange={handleCareInstructionsChange} rows={2} />
+                        </div>
+                      )
+                    }
+                    return null
+                  })}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="images">
+              <Card className="dark:border-gray-700">
+                <CardHeader>
+                  <CardTitle>Gambar Produk</CardTitle>
+                  <CardDescription>Unggah atau perbarui gambar produk.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ImageUpload
+                    currentImage={product.image || uploadedImageUrl}
+                    onImageUploaded={(url, path, bucket) => {
+                      setUploadedImageUrl(url)
+                      setUploadedImagePath(path)
+                      if (bucket) setUploadedImageBucket(bucket)
+                      setProduct((prev) => ({ ...prev, image: url, image_path: path, image_bucket: bucket }))
+                      toast({ title: "Sukses", description: "Gambar berhasil diunggah!" })
+                    }}
+                    onError={(errorMsg) => {
+                      toast({ title: "Error", description: errorMsg, variant: "destructive" })
+                    }}
+                  />
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         )}
