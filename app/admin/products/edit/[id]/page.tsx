@@ -1,3 +1,4 @@
+// app/admin/products/edit/[id]/page.tsx
 "use client"
 
 import type React from "react"
@@ -44,7 +45,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     is_published: true,
     stock: 0,
     is_popular: false,
-    // show_on_homepage: false, // Removed
+    shipping_info_notes: "Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik, segera pindahkan ke pot yang lebih besar setelah menerima tanaman.", // Default
     care_instructions: {
       light: "",
       water: "",
@@ -55,7 +56,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     },
   })
 
-  // Load categories
   useEffect(() => {
     const loadCategories = async () => {
       setIsLoadingCategories(true)
@@ -73,7 +73,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         setIsLoadingCategories(false)
       }
     }
-
     loadCategories()
   }, [])
 
@@ -92,7 +91,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             ...productData,
             is_published: productData.is_published !== undefined ? productData.is_published : true,
             is_popular: !!productData.is_popular,
-            // show_on_homepage: !!productData.show_on_homepage, // Removed
+            shipping_info_notes: productData.shipping_info_notes || "Tanaman ini dikirim dalam pot plastik berukuran sesuai dengan ukuran tanaman. Untuk hasil terbaik, segera pindahkan ke pot yang lebih besar setelah menerima tanaman.",
             care_instructions: productData.care_instructions || {
               light: "",
               water: "",
@@ -124,7 +123,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   }
 
   const handleCheckboxChange = (name: "is_popular" | "is_published", checked: boolean | string) => {
-    // Removed show_on_homepage
     setProduct((prev) => ({ ...prev, [name]: !!checked }))
   }
 
@@ -157,8 +155,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         productDataToUpdate.price = Number.parseFloat(productDataToUpdate.price) || 0
       if (typeof productDataToUpdate.stock === "string")
         productDataToUpdate.stock = Number.parseInt(productDataToUpdate.stock, 10) || 0
-
-      // delete productDataToUpdate.show_on_homepage; // Ensure this field is not sent if column was removed
 
       if (uploadedImageUrl && uploadedImageUrl !== product.image) {
         productDataToUpdate.image = uploadedImageUrl
@@ -312,7 +308,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       <Label htmlFor="is_popular">Populer (Tampil di Homepage)</Label>
                     </div>
                   </div>
-                  {/* Removed show_on_homepage checkbox */}
                   <div className="space-y-2">
                     <Label htmlFor="description">Deskripsi</Label>
                     <Textarea
@@ -323,6 +318,20 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       rows={5}
                       required
                     />
+                  </div>
+                  {/* Input untuk shipping_info_notes */}
+                  <div className="space-y-2">
+                    <Label htmlFor="shipping_info_notes">Catatan Info Pengiriman Pot</Label>
+                    <Textarea
+                      id="shipping_info_notes"
+                      name="shipping_info_notes"
+                      value={product.shipping_info_notes || ""}
+                      onChange={handleInputChange}
+                      rows={3}
+                    />
+                     <p className="text-xs text-muted-foreground">
+                      Informasi mengenai pot saat pengiriman (misal: "Tanaman ini dikirim dalam pot plastik...").
+                    </p>
                   </div>
                 </CardContent>
               </Card>
