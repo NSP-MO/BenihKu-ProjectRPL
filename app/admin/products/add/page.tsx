@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react" // tambahkan useEffect
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Loader2 } from "lucide-react"
@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ProtectedRoute from "@/components/protected-route"
 import { createProduct } from "@/lib/admin"
-import { getAllCategories } from "@/lib/products" // Import getAllCategories
+import { getAllCategories } from "@/lib/products"
 import { ImageUpload } from "@/components/image-upload"
 import { toast } from "@/components/ui/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -23,18 +23,16 @@ import { Checkbox } from "@/components/ui/checkbox"
 interface FormData {
   name: string;
   price: string;
-  description: string; // Field ini akan diisi oleh admin dengan deskripsi lengkap
+  description: string;
   category: string;
   stock: string;
   image_url: string;
   image_path: string;
   is_popular: boolean;
   status: string; 
-  origin: string; // Baru
-  lifespan: string; // Baru
-  growth_details: string; // Baru
-  recommended_tools_materials: string; // Baru
-  related_link: string; // Baru
+  origin: string;
+  recommended_tools_materials: string;
+  related_link: string;
   careInstructions: {
     light: string; water: string; soil: string; humidity: string; temperature: string; fertilizer: string;
   };
@@ -43,8 +41,8 @@ interface FormData {
 export default function AddProductPage() {
   const router = useRouter()
   const [isSaving, setIsSaving] = useState(false)
-  const [categories, setCategories] = useState<string[]>([]) // State untuk kategori
-  const [isLoadingCategories, setIsLoadingCategories] = useState(true) // State loading kategori
+  const [categories, setCategories] = useState<string[]>([])
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
 
   const [formData, setFormData] = useState<FormData>({
     name: "",
@@ -57,8 +55,6 @@ export default function AddProductPage() {
     is_popular: false,
     status: "published",
     origin: "",
-    lifespan: "",
-    growth_details: "",
     recommended_tools_materials: "",
     related_link: "",
     careInstructions: {
@@ -66,7 +62,6 @@ export default function AddProductPage() {
     },
   })
 
-  // Load categories
   useEffect(() => {
     const loadCategories = async () => {
       setIsLoadingCategories(true)
@@ -80,7 +75,6 @@ export default function AddProductPage() {
           description: "Gagal memuat kategori. Menggunakan daftar default.",
           variant: "destructive",
         })
-        // Fallback jika gagal load
         setCategories(["Tanaman Hias", "Tanaman Indoor", "Tanaman Outdoor", "Tanaman Gantung", "Kaktus & Sukulen", "Benih"])
       } finally {
         setIsLoadingCategories(false)
@@ -123,7 +117,7 @@ export default function AddProductPage() {
       const result = await createProduct({
         name: formData.name,
         price: Number.parseFloat(formData.price) || 0,
-        description: formData.description, // Deskripsi lengkap dari admin
+        description: formData.description,
         category: formData.category,
         stock: Number.parseInt(formData.stock) || 0,
         image_url: formData.image_url,
@@ -132,8 +126,6 @@ export default function AddProductPage() {
         is_published: formData.status === "published",
         care_instructions: formData.careInstructions,
         origin: formData.origin,
-        lifespan: formData.lifespan,
-        growth_details: formData.growth_details,
         recommended_tools_materials: formData.recommended_tools_materials,
         related_link: formData.related_link,
       })
@@ -250,7 +242,7 @@ export default function AddProductPage() {
                     value={formData.description} 
                     onChange={handleInputChange} 
                     rows={8} 
-                    placeholder="Masukkan deskripsi lengkap produk di sini, termasuk asal-usul, rata-rata usia, pertumbuhan, rekomendasi alat/bahan, dan link terkait jika ada."
+                    placeholder="Masukkan deskripsi lengkap produk di sini, termasuk asal-usul, rekomendasi alat/bahan, dan link terkait jika ada. Informasi usia dan pertumbuhan juga bisa dimasukkan di sini jika relevan."
                     required 
                   />
                    <p className="text-xs text-muted-foreground">
@@ -265,21 +257,14 @@ export default function AddProductPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Detail Tambahan (Opsional)</CardTitle>
-                <CardDescription>Informasi ini dapat Anda masukkan ke dalam Deskripsi Lengkap di atas.</CardDescription>
+                <CardDescription>Informasi ini dapat Anda masukkan ke dalam Deskripsi Lengkap di tab "Informasi Dasar".</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="origin">Asal-Usul Produk</Label>
                   <Input id="origin" name="origin" value={formData.origin} onChange={handleInputChange} placeholder="Contoh: Amerika Tengah, Asia Tenggara"/>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lifespan">Rata-Rata Usia/Masa Produktif</Label>
-                  <Input id="lifespan" name="lifespan" value={formData.lifespan} onChange={handleInputChange} placeholder="Contoh: 5-10 tahun, 6 bulan setelah tanam"/>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="growth_details">Rata-Rata Pertumbuhan</Label>
-                  <Input id="growth_details" name="growth_details" value={formData.growth_details} onChange={handleInputChange} placeholder="Contoh: Tinggi maksimal 2m, Lebar tajuk 1m"/>
-                </div>
+                {/* Input untuk lifespan dan growth_details dihapus */}
                 <div className="space-y-2">
                   <Label htmlFor="recommended_tools_materials">Rekomendasi Alat/Bahan Perawatan</Label>
                   <Textarea id="recommended_tools_materials" name="recommended_tools_materials" value={formData.recommended_tools_materials} onChange={handleInputChange} rows={3} placeholder="Contoh: Tanah poros, pupuk NPK, pot diameter 20cm"/>
