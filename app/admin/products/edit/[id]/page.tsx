@@ -44,11 +44,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     is_published: true,
     stock: 0,
     is_popular: false,
-    origin: "", // Baru
-    lifespan: "", // Baru
-    growth_details: "", // Baru
-    recommended_tools_materials: "", // Baru
-    related_link: "", // Baru
+    origin: "",
+    recommended_tools_materials: "",
+    related_link: "",
     care_instructions: {
       light: "",
       water: "",
@@ -96,8 +94,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             is_published: productData.is_published !== undefined ? productData.is_published : true,
             is_popular: !!productData.is_popular,
             origin: productData.origin || "",
-            lifespan: productData.lifespan || "",
-            growth_details: productData.growth_details || "",
             recommended_tools_materials: productData.recommended_tools_materials || "",
             related_link: productData.related_link || "",
             care_instructions: productData.care_instructions || {
@@ -164,6 +160,10 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         productDataToUpdate.image_path = uploadedImagePath
         productDataToUpdate.image_bucket = uploadedImageBucket
       }
+      
+      // Hapus lifespan dan growth_details dari data yang akan diupdate
+      delete productDataToUpdate.lifespan;
+      delete productDataToUpdate.growth_details;
 
       const { success: updateSuccess, error: updateError } = await updateProduct(productId, productDataToUpdate)
 
@@ -319,12 +319,12 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       value={product.description || ""}
                       onChange={handleInputChange}
                       rows={8}
-                      placeholder="Masukkan deskripsi lengkap produk di sini, termasuk asal-usul, rata-rata usia, pertumbuhan, rekomendasi alat/bahan, dan link terkait jika ada."
+                      placeholder="Masukkan deskripsi lengkap produk di sini, termasuk asal-usul, rekomendasi alat/bahan, dan link terkait jika ada. Informasi usia dan pertumbuhan juga bisa dimasukkan di sini jika relevan."
                       required
                     />
-                    <p className="text-xs text-muted-foreground">
+                     <p className="text-xs text-muted-foreground">
                       Ini adalah deskripsi utama yang akan tampil di halaman produk. Gabungkan semua informasi relevan di sini.
-                   </p>
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -341,14 +341,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     <Label htmlFor="origin">Asal-Usul Produk</Label>
                     <Input id="origin" name="origin" value={product.origin || ""} onChange={handleInputChange} placeholder="Contoh: Amerika Tengah, Asia Tenggara"/>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lifespan">Rata-Rata Usia/Masa Produktif</Label>
-                    <Input id="lifespan" name="lifespan" value={product.lifespan || ""} onChange={handleInputChange} placeholder="Contoh: 5-10 tahun, 6 bulan setelah tanam"/>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="growth_details">Rata-Rata Pertumbuhan</Label>
-                    <Input id="growth_details" name="growth_details" value={product.growth_details || ""} onChange={handleInputChange} placeholder="Contoh: Tinggi maksimal 2m, Lebar tajuk 1m"/>
-                  </div>
+                  {/* Input untuk lifespan dan growth_details dihapus */}
                   <div className="space-y-2">
                     <Label htmlFor="recommended_tools_materials">Rekomendasi Alat/Bahan Perawatan</Label>
                     <Textarea id="recommended_tools_materials" name="recommended_tools_materials" value={product.recommended_tools_materials || ""} onChange={handleInputChange} rows={3} placeholder="Contoh: Tanah poros, pupuk NPK, pot diameter 20cm"/>

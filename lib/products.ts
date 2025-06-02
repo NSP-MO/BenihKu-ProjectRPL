@@ -10,17 +10,17 @@ export type Product = {
   price: number
   image: string
   category: string
-  description: string // Field ini akan berisi deskripsi lengkap
+  description: string
   is_popular: boolean
   is_published?: boolean
   stock?: number
   image_path?: string
   image_bucket?: string
-  origin?: string // Baru
-  lifespan?: string // Baru
-  growth_details?: string // Baru
-  recommended_tools_materials?: string // Baru
-  related_link?: string // Baru
+  origin?: string
+  // lifespan?: string; // Dihapus
+  // growth_details?: string; // Dihapus
+  recommended_tools_materials?: string
+  related_link?: string
   care_instructions?: {
     light: string
     water: string
@@ -75,10 +75,10 @@ export async function getProducts(productTypeFilter: ProductTypeFilter = 'all') 
 export async function getProductById(id: number): Promise<Product | null> {
   const supabase = createServerSupabaseClient()
   try {
-    // Pastikan semua kolom baru dipilih
     const { data, error } = await supabase
       .from("products")
-      .select("*, origin, lifespan, growth_details, recommended_tools_materials, related_link") // Tambahkan kolom baru di sini
+      // Hapus lifespan dan growth_details dari select
+      .select("*, origin, recommended_tools_materials, related_link") 
       .eq("id", id)
       .single()
     if (error) {
@@ -96,6 +96,7 @@ export async function getProductById(id: number): Promise<Product | null> {
   }
 }
 
+// ... (sisa kode di lib/products.ts tetap sama)
 export async function getProductsByCategory(category: string) {
   const supabase = createServerSupabaseClient()
   try {
