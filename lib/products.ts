@@ -16,6 +16,7 @@ export type Product = {
   stock?: number
   image_path?: string
   image_bucket?: string
+  shipping_info_notes?: string // Tambahkan field ini
   care_instructions?: {
     light: string
     water: string
@@ -32,7 +33,7 @@ export type Product = {
   status?: string
 }
 
-const PRODUCT_GRID_COLUMNS = "id, name, price, image, category, is_popular, is_published, stock" // Tambahkan stock jika diperlukan untuk tampilan
+const PRODUCT_GRID_COLUMNS = "id, name, price, image, category, is_popular, is_published, stock, shipping_info_notes" // Tambahkan shipping_info_notes
 
 // Tipe untuk filter produk
 export type ProductTypeFilter = 'all' | 'tanaman' | 'benih';
@@ -71,7 +72,7 @@ export async function getProducts(productTypeFilter: ProductTypeFilter = 'all') 
 export async function getProductById(id: number): Promise<Product | null> {
   const supabase = createServerSupabaseClient()
   try {
-    const { data, error } = await supabase.from("products").select("*").eq("id", id).single()
+    const { data, error } = await supabase.from("products").select("*, shipping_info_notes").eq("id", id).single() // Tambahkan shipping_info_notes
     if (error) {
       if (error.code === "PGRST116") {
         console.log(`No product found with id ${id}`)
@@ -92,7 +93,7 @@ export async function getProductsByCategory(category: string) {
   try {
     const { data, error } = await supabase
       .from("products")
-      .select(PRODUCT_GRID_COLUMNS)
+      .select(PRODUCT_GRID_COLUMNS) // Pastikan shipping_info_notes ada di sini jika diperlukan di halaman kategori
       .eq("category", category)
       .eq("is_published", true)
 
@@ -127,7 +128,7 @@ export async function getPopularProducts(productTypeFilter: ProductTypeFilter = 
   try {
     let query = supabase
       .from("products")
-      .select(PRODUCT_GRID_COLUMNS)
+      .select(PRODUCT_GRID_COLUMNS) // Pastikan shipping_info_notes ada di sini jika diperlukan di grid populer
       .eq("is_popular", true)
       .eq("is_published", true)
 
@@ -136,7 +137,7 @@ export async function getPopularProducts(productTypeFilter: ProductTypeFilter = 
     } else if (productTypeFilter === 'benih') {
       query = query.eq("category", "Benih")
     }
-    
+
     const { data, error } = await query.limit(limit)
 
     if (error) {
