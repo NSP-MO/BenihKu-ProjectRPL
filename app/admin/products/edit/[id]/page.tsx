@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Loader2 } from "lucide-react"
+import { ArrowLeft, Loader2, Trash2 } from "lucide-react" // Tambahkan Trash2
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -14,12 +14,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ProtectedRoute from "@/components/protected-route"
 import { getProductById, getAllCategories } from "@/lib/products"
-import { updateProduct } from "@/lib/admin"
+import { updateProduct, deleteProduct } from "@/lib/admin" // Tambahkan deleteProduct
 import { ImageUpload } from "@/components/image-upload"
 import { toast } from "@/components/ui/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { Product } from "@/lib/products"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { 
+  Alert, 
+  AlertDescription,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog" // Import AlertDialog components
 
 export default function EditProductPage({ params }: { params: { id: string } }) {
   const router = useRouter()
@@ -27,6 +38,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false); // State untuk proses delete
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // State untuk dialog konfirmasi
   const [categories, setCategories] = useState<string[]>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
 
@@ -161,7 +174,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         productDataToUpdate.image_bucket = uploadedImageBucket
       }
       
-      // Hapus lifespan dan growth_details dari data yang akan diupdate
       delete productDataToUpdate.lifespan;
       delete productDataToUpdate.growth_details;
 
@@ -180,6 +192,22 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     }
   }
 
+  const handleDeleteConfirmed = async () => {
+    setIsDeleting(true);
+    setShowDeleteConfirm(false); // Close dialog
+
+    const result = await deleteProduct(productId);
+
+    if (result.success) {
+      toast({ title: "Sukses", description: "Produk berhasil dihapus." });
+      router.push("/admin/dashboard"); // Or your main admin product list page
+    } else {
+      toast({ title: "Error", description: result.error || "Gagal menghapus produk.", variant: "destructive" });
+    }
+    setIsDeleting(false);
+  };
+
+
   return (
     <ProtectedRoute adminOnly>
       <div className="container py-12">
@@ -196,7 +224,15 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             <Button variant="outline" onClick={() => router.push("/admin/dashboard")}>
               Batal
             </Button>
-            <Button className="bg-green-600 hover:bg-green-700" onClick={handleSubmit} disabled={isSaving || isLoading}>
+            <Button 
+              variant="destructive" 
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={isSaving || isLoading || isDeleting}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Hapus
+            </Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleSubmit} disabled={isSaving || isLoading || isDeleting}>
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...
@@ -341,7 +377,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     <Label htmlFor="origin">Asal-Usul Produk</Label>
                     <Input id="origin" name="origin" value={product.origin || ""} onChange={handleInputChange} placeholder="Contoh: Amerika Tengah, Asia Tenggara"/>
                   </div>
-                  {/* Input untuk lifespan dan growth_details dihapus */}
                   <div className="space-y-2">
                     <Label htmlFor="recommended_tools_materials">Rekomendasi Alat/Bahan Perawatan</Label>
                     <Textarea id="recommended_tools_materials" name="recommended_tools_materials" value={product.recommended_tools_materials || ""} onChange={handleInputChange} rows={3} placeholder="Contoh: Tanah poros, pupuk NPK, pot diameter 20cm"/>
@@ -417,6 +452,34 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           </Tabs>
         )}
       </div>
+       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Anda yakin ingin menghapus produk ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tindakan ini tidak dapat dibatalkan. Produk "{product.name || `ID ${productId}`}" akan dihapus secara permanen.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowDeleteConfirm(false)} disabled={isDeleting}>
+              Batal
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirmed}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menghapus...
+                </>
+              ) : (
+                "Ya, Hapus Produk"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ProtectedRoute>
   )
 }

@@ -15,6 +15,10 @@ export async function GET(request: NextRequest) {
     await supabase.auth.exchangeCodeForSession(code)
   }
 
-  // Always redirect to the production URL, never to localhost
-  return NextResponse.redirect("https://projectrpl.site")
+  // Pastikan redirect selalu ke domain produksi baru
+  const redirectUrl = process.env.NODE_ENV === 'production' 
+                      ? "https://benihku.site" 
+                      : requestUrl.origin;
+
+  return NextResponse.redirect(redirectUrl)
 }

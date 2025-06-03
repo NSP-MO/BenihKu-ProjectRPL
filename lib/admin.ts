@@ -151,7 +151,6 @@ export async function createProduct({
   }
 }
 
-// ... (deleteProduct tetap sama)
 export async function deleteProduct(id: number) {
   const supabase = createServerSupabaseClient()
   try {
