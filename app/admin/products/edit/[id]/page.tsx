@@ -4,24 +4,23 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Loader2, Trash2 } from "lucide-react" // Tambahkan Trash2
+import { ArrowLeft, Loader2, Trash2 } from "lucide-react" // Import Trash2
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ProtectedRoute from "@/components/protected-route"
 import { getProductById, getAllCategories } from "@/lib/products"
-import { updateProduct, deleteProduct } from "@/lib/admin" // Tambahkan deleteProduct
+import { updateProduct, deleteProduct } from "@/lib/admin" // Import deleteProduct
 import { ImageUpload } from "@/components/image-upload"
 import { toast } from "@/components/ui/use-toast"
 import { Checkbox } from "@/components/ui/checkbox"
 import type { Product } from "@/lib/products"
-import { 
-  Alert, 
-  AlertDescription,
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -30,6 +29,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog" // Import AlertDialog components
 
 export default function EditProductPage({ params }: { params: { id: string } }) {
@@ -38,8 +38,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false); // State untuk proses delete
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // State untuk dialog konfirmasi
+  const [isDeleting, setIsDeleting] = useState(false) // State untuk proses hapus
   const [categories, setCategories] = useState<string[]>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(true)
 
@@ -192,21 +191,22 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     }
   }
 
-  const handleDeleteConfirmed = async () => {
+  const handleDeleteProduct = async () => {
     setIsDeleting(true);
-    setShowDeleteConfirm(false); // Close dialog
-
-    const result = await deleteProduct(productId);
-
-    if (result.success) {
-      toast({ title: "Sukses", description: "Produk berhasil dihapus." });
-      router.push("/admin/dashboard"); // Or your main admin product list page
-    } else {
-      toast({ title: "Error", description: result.error || "Gagal menghapus produk.", variant: "destructive" });
+    try {
+      const result = await deleteProduct(productId);
+      if (result.success) {
+        toast({ title: "Sukses", description: "Produk berhasil dihapus." });
+        router.push("/admin/dashboard");
+      } else {
+        toast({ title: "Error", description: result.error || "Gagal menghapus produk.", variant: "destructive" });
+      }
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Gagal menghapus produk.", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
     }
-    setIsDeleting(false);
   };
-
 
   return (
     <ProtectedRoute adminOnly>
@@ -224,15 +224,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             <Button variant="outline" onClick={() => router.push("/admin/dashboard")}>
               Batal
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={isSaving || isLoading || isDeleting}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Hapus
-            </Button>
-            <Button className="bg-green-600 hover:bg-green-700" onClick={handleSubmit} disabled={isSaving || isLoading || isDeleting}>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleSubmit} disabled={isSaving || isLoading}>
               {isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menyimpan...
@@ -253,233 +245,250 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             <AlertDescription>Produk tidak ditemukan atau gagal dimuat.</AlertDescription>
           </Alert>
         ) : (
-          <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="mb-6 grid w-full grid-cols-3">
-              <TabsTrigger value="basic">Informasi Dasar</TabsTrigger>
-              <TabsTrigger value="details">Detail Tambahan</TabsTrigger>
-              <TabsTrigger value="care">Perawatan & Gambar</TabsTrigger>
-            </TabsList>
+          <>
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="mb-6 grid w-full grid-cols-3">
+                <TabsTrigger value="basic">Informasi Dasar</TabsTrigger>
+                <TabsTrigger value="details">Detail Tambahan</TabsTrigger>
+                <TabsTrigger value="care">Perawatan & Gambar</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="basic">
-              <Card className="dark:border-gray-700">
-                <CardHeader>
-                  <CardTitle>Informasi Dasar Produk</CardTitle>
-                  <CardDescription>Perbarui informasi dasar produk.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Nama Produk</Label>
-                      <Input id="name" name="name" value={product.name || ""} onChange={handleInputChange} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="price">Harga (Rp)</Label>
-                      <Input
-                        id="price"
-                        name="price"
-                        type="number"
-                        value={product.price || 0}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="category">Kategori</Label>
-                      <Select
-                        value={product.category || ""}
-                        onValueChange={(value) => handleSelectChange("category", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={isLoadingCategories ? "Memuat kategori..." : "Pilih kategori"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {isLoadingCategories ? (
-                            <div className="flex items-center justify-center p-2">
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              <span>Memuat kategori...</span>
-                            </div>
-                          ) : (
-                            categories.map((category) => (
-                              <SelectItem key={category} value={category}>
-                                {category}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="stock">Stok</Label>
-                      <Input
-                        id="stock"
-                        name="stock"
-                        type="number"
-                        value={product.stock || 0}
-                        onChange={handleInputChange}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                    <div className="space-y-2">
-                      <Label htmlFor="status">Status Publikasi</Label>
-                      <Select
-                        value={product.is_published ? "published" : "draft"}
-                        onValueChange={(value) => handleSelectChange("status", value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Pilih status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="published">Dipublikasikan</SelectItem>
-                          <SelectItem value="draft">Draft</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-center space-x-2 pt-4 md:pt-8">
-                      <Checkbox
-                        id="is_popular"
-                        checked={!!product.is_popular}
-                        onCheckedChange={(checked) => handleCheckboxChange("is_popular", !!checked)}
-                      />
-                      <Label htmlFor="is_popular">Populer (Tampil di Homepage)</Label>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Deskripsi Lengkap Produk</Label>
-                    <Textarea
-                      id="description"
-                      name="description"
-                      value={product.description || ""}
-                      onChange={handleInputChange}
-                      rows={8}
-                      placeholder="Masukkan deskripsi lengkap produk di sini, termasuk asal-usul, rekomendasi alat/bahan, dan link terkait jika ada. Informasi usia dan pertumbuhan juga bisa dimasukkan di sini jika relevan."
-                      required
-                    />
-                     <p className="text-xs text-muted-foreground">
-                      Ini adalah deskripsi utama yang akan tampil di halaman produk. Gabungkan semua informasi relevan di sini.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="details">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Detail Tambahan (Opsional)</CardTitle>
-                  <CardDescription>Informasi ini dapat Anda masukkan ke dalam Deskripsi Lengkap di tab "Informasi Dasar".</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="origin">Asal-Usul Produk</Label>
-                    <Input id="origin" name="origin" value={product.origin || ""} onChange={handleInputChange} placeholder="Contoh: Amerika Tengah, Asia Tenggara"/>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="recommended_tools_materials">Rekomendasi Alat/Bahan Perawatan</Label>
-                    <Textarea id="recommended_tools_materials" name="recommended_tools_materials" value={product.recommended_tools_materials || ""} onChange={handleInputChange} rows={3} placeholder="Contoh: Tanah poros, pupuk NPK, pot diameter 20cm"/>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="related_link">Link Website Terkait (Jika Ada)</Label>
-                    <Input id="related_link" name="related_link" type="url" value={product.related_link || ""} onChange={handleInputChange} placeholder="https://contoh-sumber.com/info-tanaman"/>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="care">
-              <div className="grid md:grid-cols-2 gap-6">
+              <TabsContent value="basic">
                 <Card className="dark:border-gray-700">
                   <CardHeader>
-                    <CardTitle>Informasi Perawatan</CardTitle>
-                    <CardDescription>Detail cara merawat tanaman.</CardDescription>
+                    <CardTitle>Informasi Dasar Produk</CardTitle>
+                    <CardDescription>Perbarui informasi dasar produk.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {Object.entries(product.care_instructions || {}).map(([key, value]) => (
-                      <div className="space-y-2" key={key}>
-                        <Label htmlFor={key} className="capitalize">
-                          {key.replace(/([A-Z])/g, " $1")}
-                        </Label>
-                        <Textarea
-                          id={key}
-                          name={key}
-                          value={(value as string) || ""}
-                          onChange={handleCareInstructionsChange}
-                          rows={2}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Nama Produk</Label>
+                        <Input id="name" name="name" value={product.name || ""} onChange={handleInputChange} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="price">Harga (Rp)</Label>
+                        <Input
+                          id="price"
+                          name="price"
+                          type="number"
+                          value={product.price || 0}
+                          onChange={handleInputChange}
+                          required
                         />
                       </div>
-                    ))}
-                    {["light", "water", "soil", "humidity", "temperature", "fertilizer"].map((key) => {
-                      if (!product.care_instructions || !(key in product.care_instructions)) {
-                        return (
-                          <div className="space-y-2" key={key}>
-                            <Label htmlFor={key} className="capitalize">
-                              {key}
-                            </Label>
-                            <Textarea id={key} name={key} value={""} onChange={handleCareInstructionsChange} rows={2} />
-                          </div>
-                        )
-                      }
-                      return null
-                    })}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="category">Kategori</Label>
+                        <Select
+                          value={product.category || ""}
+                          onValueChange={(value) => handleSelectChange("category", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={isLoadingCategories ? "Memuat kategori..." : "Pilih kategori"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {isLoadingCategories ? (
+                              <div className="flex items-center justify-center p-2">
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                <span>Memuat kategori...</span>
+                              </div>
+                            ) : (
+                              categories.map((category) => (
+                                <SelectItem key={category} value={category}>
+                                  {category}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="stock">Stok</Label>
+                        <Input
+                          id="stock"
+                          name="stock"
+                          type="number"
+                          value={product.stock || 0}
+                          onChange={handleInputChange}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                      <div className="space-y-2">
+                        <Label htmlFor="status">Status Publikasi</Label>
+                        <Select
+                          value={product.is_published ? "published" : "draft"}
+                          onValueChange={(value) => handleSelectChange("status", value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="published">Dipublikasikan</SelectItem>
+                            <SelectItem value="draft">Draft</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center space-x-2 pt-4 md:pt-8">
+                        <Checkbox
+                          id="is_popular"
+                          checked={!!product.is_popular}
+                          onCheckedChange={(checked) => handleCheckboxChange("is_popular", !!checked)}
+                        />
+                        <Label htmlFor="is_popular">Populer (Tampil di Homepage)</Label>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="description">Deskripsi Lengkap Produk</Label>
+                      <Textarea
+                        id="description"
+                        name="description"
+                        value={product.description || ""}
+                        onChange={handleInputChange}
+                        rows={8}
+                        placeholder="Masukkan deskripsi lengkap produk di sini, termasuk asal-usul, rekomendasi alat/bahan, dan link terkait jika ada. Informasi usia dan pertumbuhan juga bisa dimasukkan di sini jika relevan."
+                        required
+                      />
+                       <p className="text-xs text-muted-foreground">
+                        Ini adalah deskripsi utama yang akan tampil di halaman produk. Gabungkan semua informasi relevan di sini.
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
-                <Card className="dark:border-gray-700">
+              </TabsContent>
+              
+              <TabsContent value="details">
+                <Card>
                   <CardHeader>
-                    <CardTitle>Gambar Produk</CardTitle>
-                    <CardDescription>Unggah atau perbarui gambar produk.</CardDescription>
+                    <CardTitle>Detail Tambahan (Opsional)</CardTitle>
+                    <CardDescription>Informasi ini dapat Anda masukkan ke dalam Deskripsi Lengkap di tab "Informasi Dasar".</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <ImageUpload
-                      currentImage={product.image || uploadedImageUrl}
-                      onImageUploaded={(url, path, bucket) => {
-                        setUploadedImageUrl(url)
-                        setUploadedImagePath(path)
-                        if (bucket) setUploadedImageBucket(bucket)
-                        setProduct((prev) => ({ ...prev, image: url, image_path: path, image_bucket: bucket }))
-                        toast({ title: "Sukses", description: "Gambar berhasil diunggah!" })
-                      }}
-                      onError={(errorMsg) => {
-                        toast({ title: "Error", description: errorMsg, variant: "destructive" })
-                      }}
-                    />
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="origin">Asal-Usul Produk</Label>
+                      <Input id="origin" name="origin" value={product.origin || ""} onChange={handleInputChange} placeholder="Contoh: Amerika Tengah, Asia Tenggara"/>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="recommended_tools_materials">Rekomendasi Alat/Bahan Perawatan</Label>
+                      <Textarea id="recommended_tools_materials" name="recommended_tools_materials" value={product.recommended_tools_materials || ""} onChange={handleInputChange} rows={3} placeholder="Contoh: Tanah poros, pupuk NPK, pot diameter 20cm"/>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="related_link">Link Website Terkait (Jika Ada)</Label>
+                      <Input id="related_link" name="related_link" type="url" value={product.related_link || ""} onChange={handleInputChange} placeholder="https://contoh-sumber.com/info-tanaman"/>
+                    </div>
                   </CardContent>
                 </Card>
-              </div>
-            </TabsContent>
-          </Tabs>
+              </TabsContent>
+
+              <TabsContent value="care">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <Card className="dark:border-gray-700">
+                    <CardHeader>
+                      <CardTitle>Informasi Perawatan</CardTitle>
+                      <CardDescription>Detail cara merawat tanaman.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {Object.entries(product.care_instructions || {}).map(([key, value]) => (
+                        <div className="space-y-2" key={key}>
+                          <Label htmlFor={key} className="capitalize">
+                            {key.replace(/([A-Z])/g, " $1")}
+                          </Label>
+                          <Textarea
+                            id={key}
+                            name={key}
+                            value={(value as string) || ""}
+                            onChange={handleCareInstructionsChange}
+                            rows={2}
+                          />
+                        </div>
+                      ))}
+                      {["light", "water", "soil", "humidity", "temperature", "fertilizer"].map((key) => {
+                        if (!product.care_instructions || !(key in product.care_instructions)) {
+                          return (
+                            <div className="space-y-2" key={key}>
+                              <Label htmlFor={key} className="capitalize">
+                                {key}
+                              </Label>
+                              <Textarea id={key} name={key} value={""} onChange={handleCareInstructionsChange} rows={2} />
+                            </div>
+                          )
+                        }
+                        return null
+                      })}
+                    </CardContent>
+                  </Card>
+                  <Card className="dark:border-gray-700">
+                    <CardHeader>
+                      <CardTitle>Gambar Produk</CardTitle>
+                      <CardDescription>Unggah atau perbarui gambar produk.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ImageUpload
+                        currentImage={product.image || uploadedImageUrl}
+                        onImageUploaded={(url, path, bucket) => {
+                          setUploadedImageUrl(url)
+                          setUploadedImagePath(path)
+                          if (bucket) setUploadedImageBucket(bucket)
+                          setProduct((prev) => ({ ...prev, image: url, image_path: path, image_bucket: bucket }))
+                          toast({ title: "Sukses", description: "Gambar berhasil diunggah!" })
+                        }}
+                        onError={(errorMsg) => {
+                          toast({ title: "Error", description: errorMsg, variant: "destructive" })
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            {/* Tombol Hapus Produk dipindahkan ke bawah */}
+            <Card className="mt-6 dark:border-red-700 border-red-300">
+              <CardHeader>
+                <CardTitle className="text-red-600 dark:text-red-500">Zona Berbahaya</CardTitle>
+                <CardDescription>Tindakan ini tidak dapat dibatalkan.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full" disabled={isDeleting}>
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menghapus...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="mr-2 h-4 w-4" /> Hapus Produk Ini
+                        </>
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Apakah Anda benar-benar yakin?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tindakan ini tidak dapat dibatalkan. Produk akan dihapus secara permanen dari database.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Batal</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteProduct} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                        {isDeleting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menghapus...
+                          </>
+                        ) : "Ya, Hapus Produk"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardContent>
+            </Card>
+          </>
         )}
       </div>
-       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Anda yakin ingin menghapus produk ini?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tindakan ini tidak dapat dibatalkan. Produk "{product.name || `ID ${productId}`}" akan dihapus secara permanen.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowDeleteConfirm(false)} disabled={isDeleting}>
-              Batal
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirmed}
-              disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Menghapus...
-                </>
-              ) : (
-                "Ya, Hapus Produk"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </ProtectedRoute>
   )
 }
