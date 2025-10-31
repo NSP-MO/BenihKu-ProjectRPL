@@ -63,17 +63,16 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const userMessage = formData.get("message") as string | null;
     const imageFile = formData.get("image") as File | null;
-    const historyJson = formData.get("history") as string | null; // Expect history as JSON string
+    const historyJson = formData.get("history") as string | null;
 
     let conversationHistory: Array<{ role: "user" | "model"; parts: Part[] }> = [];
     if (historyJson) {
       try {
         const parsedHistory = JSON.parse(historyJson);
         if (Array.isArray(parsedHistory)) {
-          // Convert to the format expected by Gemini
           conversationHistory = parsedHistory.map((msg: { sender: 'user' | 'ai'; text: string; imageUrl?: string }) => ({
             role: msg.sender === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.text }], // Simplified: assumes text parts for history for now. Image handling in history can be complex.
+            parts: [{ text: msg.text }],
           }));
         }
       } catch (e) {
@@ -88,11 +87,10 @@ export async function POST(request: NextRequest) {
     let systemInstructionText = `Anda adalah BenihKu AI, asisten virtual untuk toko tanaman BenihKu.
     Anda ramah, membantu, dan berpengetahuan tentang tanaman.
     Tujuan Anda adalah membantu pengguna dengan pertanyaan tentang produk tanaman, benih, stok, cara perawatan, dan memberikan rekomendasi.
-    Gunakan riwayat percakapan (jika ada) untuk memahami konteks pertanyaan lanjutan, termasuk kata ganti dan referensi ke topik sebelumnya.
+    Gunakan riwayat percakapan (jika ada) untuk memahami konteks pertanyaan lanjutan.
     Jika pengguna mengunggah gambar, coba identifikasi tanaman dalam gambar tersebut dan berikan informasi yang relevan jika memungkinkan.
     Jika pertanyaan di luar topik tanaman atau BenihKu, tolak dengan sopan.
-    Selalu jawab dalam Bahasa Indonesia.
-    Jika ditanyakan rekomendasi, coba berikan rekomendasi terkait tanaman dahulu, dan 2 atau lebih benih`;
+    Selalu jawab dalam Bahasa Indonesia.`;
 
     if (imageFile) {
       const imagePart = await fileToGenerativePart(imageFile);
@@ -107,7 +105,6 @@ export async function POST(request: NextRequest) {
       currentUserParts.push({ text: userMessage });
       const lowerMessage = userMessage.toLowerCase();
 
-      // Contextual data fetching from Supabase (existing logic)
       if (lowerMessage.includes("stok") || lowerMessage.includes("tersedia")) {
         const productNameMatch = lowerMessage.match(/(?:stok|tersedia)\s*(?:untuk|dari|produk)?\s*([^?.\n]+)/i);
         const productName = productNameMatch?.[1]?.trim();
@@ -163,20 +160,30 @@ export async function POST(request: NextRequest) {
          }
       }
        else if (lowerMessage.includes("rekomendasi") || lowerMessage.includes("sarankan")) {
-        systemInstructionText += `\nPengguna meminta rekomendasi tanaman. Berikan beberapa rekomendasi.`;
+        // PERUBAHAN INSTRUKSI REKOMENDASI DI SINI
+        systemInstructionText += `\nPengguna meminta rekomendasi tanaman.
+        1.  Prioritaskan untuk merekomendasikan produk dari [DAFTAR PRODUK REKOMENDASI DARI BENIHKU] yang kami sediakan.
+        2.  Anda BOLEH memberikan rekomendasi produk lain (misal: Mawar, Melati) berdasarkan pengetahuan umum Anda JIKA TIDAK ADA YANG COCOK di daftar kami.
+        3.  PENTING: Jika Anda merekomendasikan produk yang TIDAK ADA di [DAFTAR PRODUK REKOMENDASI DARI BENIHKU], Anda HARUS memberitahu pengguna bahwa produk tersebut saat ini "tidak tersedia di BenihKu" atau "belum kami jual".
+        4.  Jika [DAFTAR PRODUK REKOMENDASI DARI BENIHKU] kosong, informasikan pengguna bahwa Anda tidak menemukan produk yang cocok di database kami, namun Anda bisa memberi rekomendasi umum (dengan mengikuti aturan #3).`;
+        
         const { data: randomProducts, error } = await supabase
             .from('products')
             .select('name, category, description, price')
-            .eq('is_published', true).limit(5).order('created_at', { ascending: false }); // Ensure created_at exists or use a different order
+            .eq('is_published', true)
+            .limit(5)
+            .order('created_at', { ascending: false }); 
+            
         if(error) console.error("Supabase query error for recommendations:", error);
         else if (randomProducts && randomProducts.length > 0) {
-            let recInfo = "\n[Contoh Produk dari Database BenihKu untuk Inspirasi Rekomendasi]:";
+            // PERUBAHAN LABEL KONTEKS DI SINI
+            let recInfo = "\n[DAFTAR PRODUK REKOMENDASI DARI BENIHKU]:";
             randomProducts.forEach(p => {
                 recInfo += `\n- ${p.name} (Kategori: ${p.category}, Harga: Rp ${p.price.toLocaleString('id-ID')}). ${p.description.substring(0,50)}...`;
             });
             currentUserParts.push({ text: recInfo });
         } else {
-          currentUserParts.push({ text: "\n[Info Tambahan: Saat ini belum ada produk yang bisa direkomendasikan dari database.]"});
+          currentUserParts.push({ text: "\n[Info Tambahan: Tidak ada produk yang bisa direkomendasikan dari database BenihKu saat ini.]"});
         }
       }
     } else {
