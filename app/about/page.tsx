@@ -56,7 +56,7 @@ export default function AboutPage() {
             </div>
             <div className="order-first md:order-last">
               <Image
-                src="https://rgsmubwxaddbakgdzcrf.supabase.co/storage/v1/object/public/images/uploads/Beech-trees.-GettyImages-98871576-5cc0f6f.webp"
+                src="/images/design-mode/Beech-trees.-GettyImages-98871576-5cc0f6f.webp"
                 alt="BenihKu Team"
                 width={600}
                 height={400}

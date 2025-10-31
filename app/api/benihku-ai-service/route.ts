@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, Part, ChatSession } from "@google/generative-ai";
 import { supabase } from "@/lib/supabase";
 
-const MODEL_NAME = "gemini-2.0-flash";
-const API_KEY = "AIzaSyBDcloTUn38rUFaxqVcL8NKoVpprAlUyN0"; // KUNCI API DISEMATKAN LANGSUNG
+const MODEL_NAME = "gemini-flash-latest";
+const API_KEY = "AIzaSyBCh_l4sdqAy3hU8Iv9xEUwxZnGPWDbQi4"; // KUNCI API DISEMATKAN LANGSUNG
 
 async function fileToGenerativePart(file: File): Promise<Part> {
   const base64EncodedData = Buffer.from(await file.arrayBuffer()).toString("base64");
