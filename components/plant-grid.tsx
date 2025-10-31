@@ -1,4 +1,3 @@
-// components/plant-grid.tsx
 "use client"
 
 import { useEffect, useState } from "react"
@@ -11,24 +10,27 @@ import { getProducts, getPopularProducts, type Product, type ProductTypeFilter }
 import { Badge } from "@/components/ui/badge"
 
 interface PlantGridProps {
-  showPopular?: boolean;
-  productTypeFilter?: ProductTypeFilter; // Tambahkan prop baru
+  showPopular?: boolean
+  productTypeFilter?: ProductTypeFilter
 }
 
-export default function PlantGrid({ showPopular = false, productTypeFilter = 'all' }: PlantGridProps) {
+export default function PlantGrid({ showPopular = false, productTypeFilter = "all" }: PlantGridProps) {
   const [plants, setPlants] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadPlants() {
-      setLoading(true);
+      setLoading(true)
+      setError(null)
       try {
-        const data = showPopular 
-          ? await getPopularProducts(productTypeFilter) 
-          : await getProducts(productTypeFilter);
+        console.log("[v0] Loading products - showPopular:", showPopular, "filter:", productTypeFilter)
+        const data = showPopular ? await getPopularProducts(productTypeFilter) : await getProducts(productTypeFilter)
+        console.log("[v0] Products loaded:", data.length)
         setPlants(data)
       } catch (error) {
-        console.error("Error loading plants:", error)
+        console.error("[v0] Error loading plants:", error)
+        setError("Failed to load products")
         setPlants([])
       } finally {
         setLoading(false)
@@ -36,7 +38,7 @@ export default function PlantGrid({ showPopular = false, productTypeFilter = 'al
     }
 
     loadPlants()
-  }, [showPopular, productTypeFilter]) // Tambahkan productTypeFilter ke dependency array
+  }, [showPopular, productTypeFilter])
 
   if (loading) {
     return (
@@ -46,11 +48,21 @@ export default function PlantGrid({ showPopular = false, productTypeFilter = 'al
     )
   }
 
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-red-600 dark:text-red-400">{error}</p>
+      </div>
+    )
+  }
+
   if (plants.length === 0) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">
-          {showPopular ? "Tidak ada produk populer yang ditampilkan saat ini untuk filter ini." : "Tidak ada produk yang tersedia untuk filter ini."}
+          {showPopular
+            ? "Tidak ada produk populer yang ditampilkan saat ini untuk filter ini."
+            : "Tidak ada produk yang tersedia untuk filter ini."}
         </p>
       </div>
     )
@@ -69,13 +81,15 @@ export default function PlantGrid({ showPopular = false, productTypeFilter = 'al
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               />
-              {plant.is_popular && plant.category !== "Benih" && ( // Hanya tampilkan "Populer" jika bukan benih (opsional)
+              {plant.is_popular && plant.category !== "Benih" && (
                 <div className="absolute top-2 right-2 bg-green-600 text-white text-xs px-2 py-1 rounded-full z-10">
                   Populer
                 </div>
               )}
-               {plant.is_popular && plant.category === "Benih" && (
-                <Badge className="absolute top-2 right-2 bg-blue-600 text-white text-xs z-10" variant="default">Benih Populer</Badge>
+              {plant.is_popular && plant.category === "Benih" && (
+                <Badge className="absolute top-2 right-2 bg-blue-600 text-white text-xs z-10" variant="default">
+                  Benih Populer
+                </Badge>
               )}
               {plant.is_published === false && (
                 <Badge

@@ -1,8 +1,7 @@
-// components/header.tsx
 "use client"
 
 import Link from "next/link"
-import { Leaf, LogOut, ShoppingCart, Menu, Loader2, Sparkles } from "lucide-react" // Tambahkan Sparkles
+import { Leaf, LogOut, ShoppingCart, Menu, Loader2, Sparkles } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useCart } from "@/contexts/cart-context"
 import { Button } from "@/components/ui/button"
@@ -78,8 +77,10 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <nav className="ml-auto hidden md:flex gap-6">
-          {/* Ubah link Beranda menjadi BenihKu AI */}
-          <Link href="/ai-chatbot" className="text-sm font-medium transition-colors hover:text-green-600 flex items-center">
+          <Link
+            href="/ai-chatbot"
+            className="text-sm font-medium transition-colors hover:text-green-600 flex items-center"
+          >
             <Sparkles className="mr-1 h-4 w-4 text-yellow-400" /> BenihKu AI
           </Link>
           <Link href="/categories" className="text-sm font-medium transition-colors hover:text-green-600">
@@ -198,9 +199,8 @@ export default function Header() {
             </SheetTrigger>
             <SheetContent side="right" className="w-[250px] sm:w-[300px]">
               <nav className="flex flex-col gap-4 mt-8">
-                {/* Ubah link Beranda menjadi BenihKu AI untuk mobile */}
                 <Link href="/ai-chatbot" className="text-base font-medium flex items-center">
-                   <Sparkles className="mr-2 h-5 w-5 text-yellow-400" /> BenihKu AI
+                  <Sparkles className="mr-2 h-5 w-5 text-yellow-400" /> BenihKu AI
                 </Link>
                 <Link href="/categories" className="text-base font-medium">
                   Kategori
