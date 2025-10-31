@@ -14,8 +14,8 @@ export const metadata: Metadata = {
   description: "Temukan berbagai jenis tanaman berkualitas untuk mempercantik ruangan Anda",
   generator: "v0.dev",
   icons: {
-    icon: [{ url: "/favicon.png" }],
-    apple: [{ url: "/favicon.png" }],
+    icon: [{ url: "/leaf-icon.svg" }],
+    apple: [{ url: "/leaf-icon.svg" }],
   },
 }
 
